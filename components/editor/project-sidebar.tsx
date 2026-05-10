@@ -71,7 +71,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
 
         <div className="shrink-0 border-t border-surface-border p-4">
           <Button type="button" variant="secondary" className="w-full gap-2">
-            <Plus className="h-4 w-4" aria-hidden />
+            <Plus className="h-4 w-4" aria-hidden={true} />
             New Project
           </Button>
         </div>
