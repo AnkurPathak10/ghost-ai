@@ -4,17 +4,28 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 02 (Editor Chrome) — complete
+- Feature 03 (Auth) — complete
 
 ## Current Goal
 
 - Next feature from `context/feature-specs/` (TBD)
 
+## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
+
+Completed tasks:
+
+- [x] `ClerkProvider` in `app/layout.tsx` via `components/providers/clerk-root-provider.tsx` — `@clerk/ui` `dark` theme spread + `variables` overrides using `:root` / design tokens only (`var(--primary)`, `var(--background)`, etc.)
+- [x] `proxy.ts` at project root — `clerkMiddleware` + `createRouteMatcher` for `/`, sign-in path, and sign-up path derived from `NEXT_PUBLIC_CLERK_SIGN_IN_URL` / `NEXT_PUBLIC_CLERK_SIGN_UP_URL` via `lib/auth-paths.ts`; all other routes `auth.protect()` by default
+- [x] `/sign-in/[[...sign-in]]` and `/sign-up/[[...sign-up]]` — `SignIn` / `SignUp` + `AuthPageShell` (two-panel on `lg+`, form-only on small screens; minimal copy, no gradients/heroes/cards)
+- [x] `app/page.tsx` — `auth()`: signed-in → `/editor`, signed-out → configurable sign-in path
+- [x] `components/editor/editor-navbar.tsx` — Clerk `UserButton` (defaults; no custom internals teardown)
+- [x] `@clerk/ui` dependency; `npm run build` and `npm run lint` pass
+
 ## Feature 02 — Editor Chrome (`context/feature-specs/02-editor.md`)
 
 Completed tasks:
 
-- [x] `components/editor/editor-navbar.tsx` — fixed `h-14` top bar, left / center / right layout, sidebar toggle with `PanelLeftOpen` / `PanelLeftClose` by state, right section empty (placeholder alignment only), dark surface + subtle bottom border
+- [x] `components/editor/editor-navbar.tsx` — fixed `h-14` top bar, left / center / right layout, sidebar toggle with `PanelLeftOpen` / `PanelLeftClose` by state, right: Clerk `UserButton` (Feature 03), dark surface + subtle bottom border
 - [x] `components/editor/project-sidebar.tsx` — floating overlay (`fixed`), does not reflow canvas, slides from left with transform + opacity transition, `isOpen` + `onClose`, header “Projects” + close button, shadcn `Tabs` for “My Projects” / “Shared” with empty placeholders, full-width secondary “New Project” + `Plus`
 - [x] Dialog pattern — deferred: use `components/ui/dialog.tsx` with `DialogHeader` / `DialogTitle` / `DialogDescription` / `DialogFooter`; tokens come from `app/globals.css` via shadcn semantic variables (`popover`, `muted`, borders, etc.). No standalone dialogs wired yet.
 
@@ -43,9 +54,9 @@ Integration / verification:
 - shadcn/ui over Tailwind v4 (CSS-based token config via `@theme inline` in `globals.css`, no `tailwind.config.js`).
 - Dark-only theme: product + shadcn semantic variables live in `:root`; `html` keeps class `dark` so `dark:` variants in generated components resolve.
 - Do not modify generated `components/ui/*` files after shadcn installation.
-- Follow Next.js 16 framework conventions from `node_modules/next/dist/docs/`.
+- Next.js 16 uses `proxy.ts` at the project root (not `middleware.ts`) with `clerkMiddleware` for Clerk; matcher skips static assets per Clerk / Next guidance.
+- Clerk env vars: use dashboard-provided `NEXT_PUBLIC_CLERK_*` keys only; sign-in/up URLs drive public route patterns in `proxy.ts`.
 
 ## Session Notes
 
-- Next.js / React versions per `package.json` in repo.
-- shadcn CLI base-nova preset.
+- Next.js 16.2.6, React 19, Clerk `@clerk/nextjs` ^7, `@clerk/ui` ^1.9.

@@ -14,6 +14,7 @@
 
 ## System Boundaries
 
+- `proxy.ts` (project root, Next.js 16) — Clerk `clerkMiddleware`: session + route protection; public routes include `/`, sign-in, and sign-up URLs from env.
 - `app/api` — Authenticated request handlers: input validation, ownership checks, task triggering, and persistence.
 - `trigger` — Long-running background jobs: AI design generation and spec generation.
 - `lib` — Shared infrastructure: Prisma client, access control helpers, and utilities.
