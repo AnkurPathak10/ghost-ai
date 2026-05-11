@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 03 (Auth) — complete
+- Feature 04 (Project dialogs) — complete
 
 ## Current Goal
 
@@ -27,7 +27,7 @@ Completed tasks:
 
 - [x] `components/editor/editor-navbar.tsx` — fixed `h-14` top bar, left / center / right layout, sidebar toggle with `PanelLeftOpen` / `PanelLeftClose` by state, right: Clerk `UserButton` (Feature 03), dark surface + subtle bottom border
 - [x] `components/editor/project-sidebar.tsx` — floating overlay (`fixed`), does not reflow canvas, slides from left with transform + opacity transition, `isOpen` + `onClose`, header “Projects” + close button, shadcn `Tabs` for “My Projects” / “Shared” with empty placeholders, full-width secondary “New Project” + `Plus`
-- [x] Dialog pattern — deferred: use `components/ui/dialog.tsx` with `DialogHeader` / `DialogTitle` / `DialogDescription` / `DialogFooter`; tokens come from `app/globals.css` via shadcn semantic variables (`popover`, `muted`, borders, etc.). No standalone dialogs wired yet.
+- [x] Dialog pattern — use `components/ui/dialog.tsx` with `DialogHeader` / `DialogTitle` / `DialogDescription` / `DialogFooter`; wired in Feature 04 (`components/editor/project-dialogs.tsx`).
 
 Integration / verification:
 
@@ -44,6 +44,19 @@ Integration / verification:
 ## Next Up
 
 - TBD (next numbered feature spec).
+
+## Feature 04 — Project dialogs (`context/feature-specs/04-project-dialogs.md`)
+
+Completed tasks:
+
+- [x] Editor home (`components/editor/editor-home.tsx`) — heading, description, `New Project` + `Plus`; minimal layout, no cards; opens Create dialog
+- [x] `hooks/use-project-dialogs.ts` — dialog state, form state (`createName`, `renameName`, `slugPreview`), `isLoading`; mock mutations only (short delay, no API)
+- [x] `components/editor/editor-workspace-provider.tsx` + `EditorLayout` — provider wraps editor shell; `ProjectDialogs` mounted once
+- [x] Create / Rename / Delete dialogs (`components/editor/project-dialogs.tsx`) — slug live preview; rename prefilled + current name in description + focus + Enter submits; delete destructive confirm, no input
+- [x] `components/editor/project-sidebar.tsx` — mock lists (My vs Shared), rename/delete only for owned rows; `New Project` → Create dialog
+- [x] `components/editor/mobile-sidebar-scrim.tsx` — mobile-only backdrop (`md:hidden`), tap closes sidebar; `z-25` under sidebar (`z-30`)
+- [x] `lib/editor/mock-projects.ts`, `lib/editor/project-slug.ts` — mock data + `slugifyPreview`
+- [x] `npm run lint` and `npm run build` pass
 
 ## Open Questions
 

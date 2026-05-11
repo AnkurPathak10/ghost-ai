@@ -3,13 +3,16 @@
 import { useState, type ReactNode } from "react"
 
 import { EditorNavbar } from "@/components/editor/editor-navbar"
+import { EditorWorkspaceProvider } from "@/components/editor/editor-workspace-provider"
+import { MobileSidebarScrim } from "@/components/editor/mobile-sidebar-scrim"
+import { ProjectDialogs } from "@/components/editor/project-dialogs"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
 
 export interface EditorLayoutProps {
   children: ReactNode
 }
 
-export function EditorLayout({ children }: EditorLayoutProps) {
+function EditorLayoutInner({ children }: EditorLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -18,8 +21,24 @@ export function EditorLayout({ children }: EditorLayoutProps) {
         sidebarOpen={sidebarOpen}
         onSidebarToggle={() => setSidebarOpen((open) => !open)}
       />
-      <ProjectSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <MobileSidebarScrim
+        isVisible={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+      <ProjectSidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <main className="min-h-screen pt-14">{children}</main>
+      <ProjectDialogs />
     </div>
+  )
+}
+
+export function EditorLayout({ children }: EditorLayoutProps) {
+  return (
+    <EditorWorkspaceProvider>
+      <EditorLayoutInner>{children}</EditorLayoutInner>
+    </EditorWorkspaceProvider>
   )
 }
