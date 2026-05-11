@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 05 (Prisma) — complete
+- Feature 07 (Wire editor home) — complete
 
 ## Current Goal
 
@@ -43,7 +43,23 @@ Integration / verification:
 
 ## Next Up
 
-- TBD (next numbered feature spec).
+- Next numbered feature spec after 07 (TBD).
+
+## Feature 07 — Wire editor home (`context/feature-specs/07-wire-editor-home.md`)
+
+Completed tasks:
+
+- [x] `lib/editor/server-project-lists.ts` — server-only `fetchEditorProjectLists()` using Prisma (owned by Clerk `userId`; shared via `ProjectCollaborator` email match + `currentUser()` primary email)
+- [x] `app/editor/layout.tsx` — async layout loads lists and passes into `EditorLayout`
+- [x] `hooks/use-project-dialogs.ts` — real `POST` / `PATCH` / `DELETE` to `/api/projects`, room ID = slug + suffix (preview + create payload), `router.refresh()`, delete redirects off active workspace
+- [x] `app/api/projects/route.ts` — optional JSON `id` on create (validated; `409` on collision) so room ID aligns with `Project.id`
+- [x] `lib/api/http.ts` — `jsonConflict` helper
+- [x] `components/editor/editor-layout.tsx` + `editor-workspace-provider.tsx` — initial owned/shared props into hook
+- [x] `components/editor/project-sidebar.tsx` — real lists, `Link` to `/editor/[projectId]`
+- [x] `components/editor/project-dialogs.tsx` — room ID preview + mutation errors
+- [x] `app/editor/[projectId]/page.tsx` — minimal workspace shell for post-create navigation
+- [x] `lib/editor/editor-project.ts`, `lib/editor/project-room-id.ts` — sidebar types + room id helpers; removed mock-only `lib/editor/mock-projects.ts`
+- [x] `npm run build` passes
 
 ## Feature 04 — Project dialogs (`context/feature-specs/04-project-dialogs.md`)
 
@@ -55,7 +71,7 @@ Completed tasks:
 - [x] Create / Rename / Delete dialogs (`components/editor/project-dialogs.tsx`) — slug live preview; rename prefilled + current name in description + focus + Enter submits; delete destructive confirm, no input
 - [x] `components/editor/project-sidebar.tsx` — mock lists (My vs Shared), rename/delete only for owned rows; `New Project` → Create dialog
 - [x] `components/editor/mobile-sidebar-scrim.tsx` — mobile-only backdrop (`md:hidden`), tap closes sidebar; `z-25` under sidebar (`z-30`)
-- [x] `lib/editor/mock-projects.ts`, `lib/editor/project-slug.ts` — mock data + `slugifyPreview`
+- [x] `lib/editor/project-slug.ts` — `slugifyPreview` (still used for room ID preview / Prisma ids); mock lists removed in Feature 07
 - [x] `npm run lint` and `npm run build` pass
 
 ## Feature 05 — Prisma (`context/feature-specs/05-prisma.md`)
@@ -65,6 +81,18 @@ Completed tasks:
 - [x] `prisma/models/project.prisma` — `Project` (ownerId, name, optional description, `ProjectStatus` DRAFT/ARCHIVED, optional `canvasJsonPath`, timestamps, indexes on `ownerId` and `createdAt`) and `ProjectCollaborator` (cascade delete from project, email, `createdAt`, `@@unique([projectId, email])`, indexes on `email` and `[projectId, createdAt]`)
 - [x] `lib/prisma.ts` — cached singleton: `prisma+postgres://` / `prisma://` → Accelerate (`accelerateUrl` + `withAccelerate()`); otherwise `@prisma/adapter-pg` + `pg` `Pool`; dev global cache for hot reload
 - [x] First migration `20260511173035_init` applied; `@prisma/extension-accelerate` dependency added; `npm run build` runs `prisma generate && next build`
+
+## Feature 06 — Project APIs (`context/feature-specs/06-project-apis.md`)
+
+Completed tasks:
+
+- [x] `GET /api/projects` — list projects for `auth().userId` as `ownerId` (newest first); `401` if no user
+- [x] `POST /api/projects` — create with Clerk `ownerId`; default `name` to `Untitled Project`; optional JSON `name` / `description`; `201` response
+- [x] `PATCH /api/projects/[projectId]` — rename via JSON `{ name }`; owner-only; `401` / `403` / `404` as appropriate
+- [x] `DELETE /api/projects/[projectId]` — owner-only delete; `204` on success; `401` / `403` / `404` as appropriate
+- [x] `proxy.ts` — `/api/projects(.*)` public at middleware so handlers return JSON `401` instead of redirect; `lib/api/http.ts` shared JSON error helpers
+- [x] `lib/prisma.ts` — export typed as `PrismaClient` (Accelerate branch cast) to avoid incompatible union types in callers
+- [x] `npm run lint` and `npm run build` pass
 
 ## Open Questions
 

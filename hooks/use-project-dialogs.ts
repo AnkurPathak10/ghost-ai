@@ -1,124 +1,203 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 
+import type { EditorSidebarProject } from "@/lib/editor/editor-project"
 import {
-  INITIAL_MOCK_PROJECTS,
-  type MockProject,
-} from "@/lib/editor/mock-projects"
-import { slugifyPreview } from "@/lib/editor/project-slug"
+  buildRoomIdPreview,
+  generateRoomIdSuffix,
+} from "@/lib/editor/project-room-id"
 
 export type ProjectDialogMode = "create" | "rename" | "delete" | null
 
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
 export interface UseProjectDialogsOptions {
-  initialProjects?: MockProject[]
+  initialOwned: EditorSidebarProject[]
+  initialShared: EditorSidebarProject[]
+}
+
+type ApiProject = { id: string; name: string }
+
+async function readApiError(res: Response): Promise<string> {
+  try {
+    const body: unknown = await res.json()
+    if (body && typeof body === "object" && "error" in body) {
+      const msg = (body as { error?: unknown }).error
+      if (typeof msg === "string" && msg.trim() !== "") return msg
+    }
+  } catch {
+    /* ignore */
+  }
+  return "Something went wrong"
 }
 
 export function useProjectDialogs({
-  initialProjects = INITIAL_MOCK_PROJECTS,
-}: UseProjectDialogsOptions = {}) {
-  const [projects, setProjects] = useState<MockProject[]>(initialProjects)
+  initialOwned,
+  initialShared,
+}: UseProjectDialogsOptions) {
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const projects = useMemo(
+    () => [...initialOwned, ...initialShared],
+    [initialOwned, initialShared]
+  )
+
   const [activeDialog, setActiveDialog] = useState<ProjectDialogMode>(null)
-  const [targetProject, setTargetProject] = useState<MockProject | null>(null)
+  const [targetProject, setTargetProject] =
+    useState<EditorSidebarProject | null>(null)
   const [createName, setCreateName] = useState("")
+  const [createRoomSuffix, setCreateRoomSuffix] = useState(() =>
+    generateRoomIdSuffix()
+  )
   const [renameName, setRenameName] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [mutationError, setMutationError] = useState<string | null>(null)
 
-  const myProjects = useMemo(
-    () => projects.filter((p) => p.membership === "owner"),
-    [projects]
+  const roomIdPreview = useMemo(
+    () => buildRoomIdPreview(createName, createRoomSuffix),
+    [createName, createRoomSuffix]
   )
-  const sharedProjects = useMemo(
-    () => projects.filter((p) => p.membership === "collaborator"),
-    [projects]
-  )
-
-  const slugPreview = useMemo(() => slugifyPreview(createName), [createName])
 
   const closeDialog = useCallback(() => {
     setActiveDialog(null)
     setTargetProject(null)
     setCreateName("")
+    setCreateRoomSuffix(generateRoomIdSuffix())
     setRenameName("")
     setIsLoading(false)
+    setMutationError(null)
   }, [])
 
   const openCreate = useCallback(() => {
     setTargetProject(null)
     setCreateName("")
+    setCreateRoomSuffix(generateRoomIdSuffix())
     setRenameName("")
+    setMutationError(null)
     setActiveDialog("create")
   }, [])
 
-  const openRename = useCallback((project: MockProject) => {
+  const openRename = useCallback((project: EditorSidebarProject) => {
     setTargetProject(project)
     setRenameName(project.name)
+    setMutationError(null)
     setActiveDialog("rename")
   }, [])
 
-  const openDelete = useCallback((project: MockProject) => {
+  const openDelete = useCallback((project: EditorSidebarProject) => {
     setTargetProject(project)
+    setMutationError(null)
     setActiveDialog("delete")
   }, [])
 
   const submitCreate = useCallback(async () => {
     const name = createName.trim()
     if (!name || isLoading) return
+
     setIsLoading(true)
-    await delay(280)
-    const slug =
-      slugifyPreview(name) ||
-      `project-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`
-    const next: MockProject = {
-      id: crypto.randomUUID(),
-      name,
-      slug,
-      membership: "owner",
+    setMutationError(null)
+
+    let suffix = createRoomSuffix
+    const maxAttempts = 8
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const id = buildRoomIdPreview(name, suffix)
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, id }),
+      })
+
+      if (res.ok) {
+        const created = (await res.json()) as ApiProject
+        setIsLoading(false)
+        closeDialog()
+        router.push(`/editor/${created.id}`)
+        router.refresh()
+        return
+      }
+
+      if (res.status === 409) {
+        suffix = generateRoomIdSuffix()
+        continue
+      }
+
+      setMutationError(await readApiError(res))
+      setIsLoading(false)
+      return
     }
-    setProjects((prev) => [...prev, next])
+
+    setMutationError("Could not create project. Try again.")
     setIsLoading(false)
-    closeDialog()
-  }, [closeDialog, createName, isLoading])
+  }, [closeDialog, createName, createRoomSuffix, isLoading, router])
 
   const submitRename = useCallback(async () => {
     const name = renameName.trim()
     if (!name || !targetProject || isLoading) return
+    if (targetProject.membership !== "owner") return
+
     setIsLoading(true)
-    await delay(280)
-    const slug =
-      slugifyPreview(name) ||
-      targetProject.slug ||
-      `project-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === targetProject.id ? { ...p, name, slug } : p
-      )
+    setMutationError(null)
+
+    const res = await fetch(
+      `/api/projects/${encodeURIComponent(targetProject.id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }
     )
+
+    if (!res.ok) {
+      setMutationError(await readApiError(res))
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(false)
     closeDialog()
-  }, [closeDialog, isLoading, renameName, targetProject])
+    router.refresh()
+  }, [closeDialog, isLoading, renameName, router, targetProject])
 
   const submitDelete = useCallback(async () => {
     if (!targetProject || isLoading) return
+    if (targetProject.membership !== "owner") return
+
     setIsLoading(true)
-    await delay(280)
-    setProjects((prev) => prev.filter((p) => p.id !== targetProject.id))
+    setMutationError(null)
+
+    const id = targetProject.id
+    const res = await fetch(`/api/projects/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    })
+
+    if (!(res.ok || res.status === 204)) {
+      setMutationError(await readApiError(res))
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(false)
     closeDialog()
-  }, [closeDialog, isLoading, targetProject])
+
+    const workspacePath = `/editor/${id}`
+    if (pathname === workspacePath) {
+      router.replace("/editor")
+    }
+    router.refresh()
+  }, [closeDialog, isLoading, pathname, router, targetProject])
 
   return {
     projects,
-    myProjects,
-    sharedProjects,
+    myProjects: initialOwned,
+    sharedProjects: initialShared,
     dialogState: activeDialog,
     targetProject,
+    mutationError,
     formState: {
       createName,
       renameName,
-      slugPreview,
+      roomIdPreview,
     },
     isLoading,
     setCreateName,

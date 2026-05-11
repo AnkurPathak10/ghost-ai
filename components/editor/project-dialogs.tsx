@@ -19,6 +19,7 @@ export function ProjectDialogs() {
     dialogState,
     targetProject,
     formState,
+    mutationError,
     isLoading,
     setCreateName,
     setRenameName,
@@ -56,7 +57,7 @@ export function ProjectDialogs() {
           <DialogHeader>
             <DialogTitle>Create project</DialogTitle>
             <DialogDescription>
-              Name your workspace. The slug updates as you type.
+              Name your workspace. The room ID preview updates as you type.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -78,13 +79,18 @@ export function ProjectDialogs() {
                 disabled={isLoading}
               />
               <p className="text-xs text-copy-muted">
-                Slug preview:{" "}
+                Room ID preview:{" "}
                 <span className="font-mono text-copy-secondary">
-                  {formState.slugPreview
-                    ? `/${formState.slugPreview}`
+                  {formState.roomIdPreview
+                    ? `/${formState.roomIdPreview}`
                     : "—"}
                 </span>
               </p>
+              {mutationError && dialogState === "create" ? (
+                <p className="text-xs text-state-error" role="alert">
+                  {mutationError}
+                </p>
+              ) : null}
             </div>
             <DialogFooter className="rounded-b-3xl sm:justify-end">
               <Button
@@ -138,6 +144,11 @@ export function ProjectDialogs() {
                 autoComplete="off"
                 disabled={isLoading}
               />
+              {mutationError && dialogState === "rename" ? (
+                <p className="text-xs text-state-error" role="alert">
+                  {mutationError}
+                </p>
+              ) : null}
             </div>
             <DialogFooter className="rounded-b-3xl sm:justify-end">
               <Button
@@ -173,6 +184,11 @@ export function ProjectDialogs() {
               from your list. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          {mutationError && dialogState === "delete" ? (
+            <p className="px-6 text-xs text-state-error sm:px-0" role="alert">
+              {mutationError}
+            </p>
+          ) : null}
           <DialogFooter className="rounded-b-3xl sm:justify-end">
             <Button
               type="button"

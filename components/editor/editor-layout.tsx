@@ -7,12 +7,15 @@ import { EditorWorkspaceProvider } from "@/components/editor/editor-workspace-pr
 import { MobileSidebarScrim } from "@/components/editor/mobile-sidebar-scrim"
 import { ProjectDialogs } from "@/components/editor/project-dialogs"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
+import type { EditorSidebarProject } from "@/lib/editor/editor-project"
 
 export interface EditorLayoutProps {
   children: ReactNode
+  initialOwned: EditorSidebarProject[]
+  initialShared: EditorSidebarProject[]
 }
 
-function EditorLayoutInner({ children }: EditorLayoutProps) {
+function EditorLayoutInner({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
@@ -35,9 +38,16 @@ function EditorLayoutInner({ children }: EditorLayoutProps) {
   )
 }
 
-export function EditorLayout({ children }: EditorLayoutProps) {
+export function EditorLayout({
+  children,
+  initialOwned,
+  initialShared,
+}: EditorLayoutProps) {
   return (
-    <EditorWorkspaceProvider>
+    <EditorWorkspaceProvider
+      initialOwned={initialOwned}
+      initialShared={initialShared}
+    >
       <EditorLayoutInner>{children}</EditorLayoutInner>
     </EditorWorkspaceProvider>
   )
