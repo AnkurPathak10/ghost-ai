@@ -4,7 +4,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 04 (Project dialogs) — complete
+- Feature 05 (Prisma) — complete
 
 ## Current Goal
 
@@ -57,6 +57,14 @@ Completed tasks:
 - [x] `components/editor/mobile-sidebar-scrim.tsx` — mobile-only backdrop (`md:hidden`), tap closes sidebar; `z-25` under sidebar (`z-30`)
 - [x] `lib/editor/mock-projects.ts`, `lib/editor/project-slug.ts` — mock data + `slugifyPreview`
 - [x] `npm run lint` and `npm run build` pass
+
+## Feature 05 — Prisma (`context/feature-specs/05-prisma.md`)
+
+Completed tasks:
+
+- [x] `prisma/models/project.prisma` — `Project` (ownerId, name, optional description, `ProjectStatus` DRAFT/ARCHIVED, optional `canvasJsonPath`, timestamps, indexes on `ownerId` and `createdAt`) and `ProjectCollaborator` (cascade delete from project, email, `createdAt`, `@@unique([projectId, email])`, indexes on `email` and `[projectId, createdAt]`)
+- [x] `lib/prisma.ts` — cached singleton: `prisma+postgres://` / `prisma://` → Accelerate (`accelerateUrl` + `withAccelerate()`); otherwise `@prisma/adapter-pg` + `pg` `Pool`; dev global cache for hot reload
+- [x] First migration `20260511173035_init` applied; `@prisma/extension-accelerate` dependency added; `npm run build` runs `prisma generate && next build`
 
 ## Open Questions
 
