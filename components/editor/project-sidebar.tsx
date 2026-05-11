@@ -1,11 +1,12 @@
 "use client"
 
+import Link from "next/link"
 import { Pencil, Plus, Trash2, X } from "lucide-react"
 
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { MockProject } from "@/lib/editor/mock-projects"
+import type { EditorSidebarProject } from "@/lib/editor/editor-project"
 import { cn } from "@/lib/utils"
 
 export interface ProjectSidebarProps {
@@ -68,6 +69,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
             value="my-projects"
             projects={myProjects}
             showActions
+            onNavigate={onClose}
             onRename={openRename}
             onDelete={openDelete}
             emptyLabel="No projects yet"
@@ -77,6 +79,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
             value="shared"
             projects={sharedProjects}
             showActions={false}
+            onNavigate={onClose}
             onRename={openRename}
             onDelete={openDelete}
             emptyLabel="No shared projects"
@@ -101,10 +104,11 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
 
 interface TabsContentMyProps {
   value: string
-  projects: MockProject[]
+  projects: EditorSidebarProject[]
   showActions: boolean
-  onRename: (project: MockProject) => void
-  onDelete: (project: MockProject) => void
+  onNavigate: () => void
+  onRename: (project: EditorSidebarProject) => void
+  onDelete: (project: EditorSidebarProject) => void
   emptyLabel: string
 }
 
@@ -112,6 +116,7 @@ function TabsContentMy({
   value,
   projects,
   showActions,
+  onNavigate,
   onRename,
   onDelete,
   emptyLabel,
@@ -133,14 +138,18 @@ function TabsContentMy({
                   showActions ? "pr-1" : ""
                 )}
               >
-                <div className="min-w-0 flex-1">
+                <Link
+                  href={`/editor/${project.id}`}
+                  className="min-w-0 flex-1 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  onClick={() => onNavigate()}
+                >
                   <p className="truncate text-sm font-medium text-copy-primary">
                     {project.name}
                   </p>
                   <p className="truncate font-mono text-xs text-copy-muted">
-                    /{project.slug}
+                    /{project.id}
                   </p>
-                </div>
+                </Link>
                 {showActions ? (
                   <div className="flex shrink-0 items-center gap-0.5">
                     <Button
