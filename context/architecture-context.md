@@ -24,6 +24,7 @@
 
 ## Storage Model
 
+- **Prisma Client**: uses Prisma Accelerate when `DATABASE_URL` starts with `prisma+postgres://` or `prisma://`; otherwise connects with the PostgreSQL driver via `@prisma/adapter-pg` and `pg`.
 - **Database**: metadata, ownership, relationships, and task run records.
 - **Vercel Blob**: generated artifacts — canvas snapshots at `canvas/{projectId}.json` and specs at `specs/{projectId}/{specId}.md`.
 - Project records, spec records, and task run records belong in PostgreSQL.
