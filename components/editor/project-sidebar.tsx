@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Pencil, Plus, Trash2, X } from "lucide-react"
 
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { EditorSidebarProject } from "@/lib/editor/editor-project"
+import { pathnameWorkspaceProjectId } from "@/lib/editor/editor-pathname"
 import { cn } from "@/lib/utils"
 
 export interface ProjectSidebarProps {
@@ -16,6 +18,9 @@ export interface ProjectSidebarProps {
 }
 
 export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarProps) {
+  const pathname = usePathname()
+  const activeWorkspaceId = pathnameWorkspaceProjectId(pathname)
+
   const {
     myProjects,
     sharedProjects,
@@ -68,6 +73,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
           <TabsContentMy
             value="my-projects"
             projects={myProjects}
+            activeProjectId={activeWorkspaceId}
             showActions
             onNavigate={onClose}
             onRename={openRename}
@@ -78,6 +84,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
           <TabsContentMy
             value="shared"
             projects={sharedProjects}
+            activeProjectId={activeWorkspaceId}
             showActions={false}
             onNavigate={onClose}
             onRename={openRename}
@@ -105,6 +112,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
 interface TabsContentMyProps {
   value: string
   projects: EditorSidebarProject[]
+  activeProjectId: string | null
   showActions: boolean
   onNavigate: () => void
   onRename: (project: EditorSidebarProject) => void
@@ -115,6 +123,7 @@ interface TabsContentMyProps {
 function TabsContentMy({
   value,
   projects,
+  activeProjectId,
   showActions,
   onNavigate,
   onRename,
@@ -135,7 +144,10 @@ function TabsContentMy({
               <div
                 className={cn(
                   "flex items-center gap-2 rounded-xl px-2 py-2",
-                  showActions ? "pr-1" : ""
+                  showActions ? "pr-1" : "",
+                  project.id === activeProjectId
+                    ? "bg-accent-dim ring-1 ring-brand/25"
+                    : ""
                 )}
               >
                 <Link

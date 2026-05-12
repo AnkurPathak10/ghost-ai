@@ -1,33 +1,19 @@
 import "server-only"
 
-import { auth, currentUser } from "@clerk/nextjs/server"
-
 import type { EditorSidebarProject } from "@/lib/editor/editor-project"
+import { getEditorClerkIdentity } from "@/lib/project-access"
 import { prisma } from "@/lib/prisma"
-
-function primaryEmailFromUser(user: Awaited<ReturnType<typeof currentUser>>): string | null {
-  if (!user) return null
-  const primaryId = user.primaryEmailAddressId
-  const primary =
-    primaryId !== null && primaryId !== undefined
-      ? user.emailAddresses.find((e) => e.id === primaryId)
-      : undefined
-  const fallback = user.emailAddresses[0]
-  const addr = primary ?? fallback
-  return addr?.emailAddress?.toLowerCase().trim() ?? null
-}
 
 export async function fetchEditorProjectLists(): Promise<{
   owned: EditorSidebarProject[]
   shared: EditorSidebarProject[]
 }> {
-  const { userId } = await auth()
-  if (!userId) {
+  const identity = await getEditorClerkIdentity()
+  if (!identity) {
     return { owned: [], shared: [] }
   }
 
-  const user = await currentUser()
-  const email = primaryEmailFromUser(user)
+  const { userId, primaryEmail: email } = identity
 
   const [ownedRows, sharedRows] = await Promise.all([
     prisma.project.findMany({
