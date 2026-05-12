@@ -92,7 +92,7 @@ export function EditorNavbar({
                 aria-pressed={aiSidebarOpen}
                 aria-expanded={aiSidebarOpen}
                 aria-label={
-                  aiSidebarOpen ? "Hide AI Copilot panel" : "Show AI Copilot panel"
+                  aiSidebarOpen ? "Hide AI Chatbox panel" : "Show AI Chatbox panel"
                 }
                 onClick={toggleAiSidebar}
               >

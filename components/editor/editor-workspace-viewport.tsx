@@ -61,7 +61,7 @@ export function EditorWorkspaceViewport() {
         <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">
           <div className="shrink-0 border-b border-surface-border px-5 py-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold tracking-tight text-copy-primary">
+              <h2 className="text-lg font-semibold leading-snug tracking-tight text-copy-primary">
                 AI Chatbox
               </h2>
               <Sparkles
