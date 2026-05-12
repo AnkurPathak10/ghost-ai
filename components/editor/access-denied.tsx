@@ -15,8 +15,8 @@ export function AccessDenied() {
             <Lock
               className="size-7 text-copy-primary"
               strokeWidth={1.65}
-              aria-hidden
-            />
+              aria-hidden="true"
+            />          
           </div>
           <h1 className="mt-8 text-xl font-semibold tracking-tight text-copy-primary">
             You don&apos;t have access to this workspace.

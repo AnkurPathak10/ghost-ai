@@ -19,7 +19,7 @@ export interface ProjectSidebarProps {
 
 export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarProps) {
   const pathname = usePathname()
-  const activeWorkspaceId = pathnameWorkspaceProjectId(pathname)
+  const activeProjectId = pathnameWorkspaceProjectId(pathname)
 
   const {
     myProjects,
@@ -73,7 +73,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
           <TabsContentMy
             value="my-projects"
             projects={myProjects}
-            activeProjectId={activeWorkspaceId}
+            activeProjectId={activeProjectId}
             showActions
             onNavigate={onClose}
             onRename={openRename}
@@ -84,7 +84,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
           <TabsContentMy
             value="shared"
             projects={sharedProjects}
-            activeProjectId={activeWorkspaceId}
+            activeProjectId={activeProjectId}
             showActions={false}
             onNavigate={onClose}
             onRename={openRename}

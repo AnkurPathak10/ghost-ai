@@ -54,12 +54,11 @@ export function EditorWorkspaceViewport() {
         className={cn(
           "shrink-0 border-l border-surface-border bg-subtle transition-[width,opacity] duration-200 ease-out",
           aiSidebarOpen
-            ? "w-[min(100%,22rem)] opacity-100 sm:w-96"
+            ? "w-[min(100%,24rem)] opacity-100 sm:w-96"
             : "w-0 overflow-hidden border-transparent opacity-0"
         )}
       >
-        <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">
-          <div className="shrink-0 border-b border-surface-border px-5 py-4">
+        <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">          <div className="shrink-0 border-b border-surface-border px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold leading-snug tracking-tight text-copy-primary">
                 AI Chatbox
