@@ -1,5 +1,31 @@
+import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+
+import { AccessDenied } from "@/components/editor/access-denied"
+import { EditorWorkspaceViewport } from "@/components/editor/editor-workspace-viewport"
+import { RegisterWorkspaceChrome } from "@/components/editor/register-workspace-chrome"
+import { getSignInPathname } from "@/lib/auth-paths"
+import {
+  getEditorClerkIdentity,
+  getProjectAccessibleToEditor,
+} from "@/lib/project-access"
+
 type EditorWorkspacePageProps = {
   params: Promise<{ projectId: string }>
+}
+
+export async function generateMetadata({
+  params,
+}: EditorWorkspacePageProps): Promise<Metadata> {
+  const { projectId } = await params
+  const identity = await getEditorClerkIdentity()
+  if (!identity) {
+    return { title: "Workspace" }
+  }
+  const project = await getProjectAccessibleToEditor(projectId, identity)
+  return {
+    title: project?.name ?? "Workspace",
+  }
 }
 
 export default async function EditorWorkspacePage({
@@ -7,19 +33,20 @@ export default async function EditorWorkspacePage({
 }: EditorWorkspacePageProps) {
   const { projectId } = await params
 
+  const identity = await getEditorClerkIdentity()
+  if (!identity) {
+    redirect(getSignInPathname())
+  }
+
+  const project = await getProjectAccessibleToEditor(projectId, identity)
+  if (!project) {
+    return <AccessDenied />
+  }
+
   return (
-    <div
-      className="flex min-h-[calc(100vh-3.5rem)] flex-col px-6 py-10"
-      role="region"
-      aria-label="Editor workspace"
-    >
-      <h1 className="text-lg font-medium text-copy-primary">Workspace</h1>
-      <p className="mt-2 max-w-prose text-sm text-copy-secondary">
-        Canvas and collaboration will live here. Room ID matches this project.
-      </p>
-      <p className="mt-4 truncate font-mono text-xs text-copy-muted">
-        {projectId}
-      </p>
-    </div>
+    <>
+      <RegisterWorkspaceChrome projectId={project.id} projectName={project.name} />
+      <EditorWorkspaceViewport />
+    </>
   )
 }

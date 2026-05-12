@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 07 (Wire editor home) — complete
+- Feature 09 (Share dialog & collaborators API) — complete
 
 ## Current Goal
 
-- Next feature from `context/feature-specs/` (TBD)
+- Next numbered feature spec after 09 (TBD)
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -43,7 +43,37 @@ Integration / verification:
 
 ## Next Up
 
-- Next numbered feature spec after 07 (TBD).
+- Next numbered feature spec after 09 (TBD).
+
+## Feature 09 — Share dialog (`context/feature-specs/09-share-dialog.md`)
+
+Completed tasks:
+
+- [x] `resolveProjectCollaboratorMembership` in `lib/project-access.ts` — owner-or-collaborator gate for collaborator routes (otherwise `404`)
+- [x] `lib/collaborators/clerk-collaborator-profiles.ts` — batched Clerk `users.getUserList({ emailAddress })`; email → `{ displayName, imageUrl }` when a user exists, else fallback to email in UI
+- [x] `GET /api/projects/[projectId]/collaborators` — `role` + enriched `collaborators` array
+- [x] `POST /api/projects/[projectId]/collaborators` — owner-only invite by email; rejects self-invite via Clerk email list; `409` duplicate
+- [x] `DELETE /api/projects/[projectId]/collaborators` — owner-only; JSON `{ email }`; `204` / `404`
+- [x] `components/editor/share-dialog.tsx` — workspace share UI: copy link + `Copied!`, owner invite/remove, collaborator read-only list + footer note
+- [x] `editor-workspace-provider.tsx` — `shareDialogOpen` / `openShareDialog`; reset on `clearWorkspaceChrome`
+- [x] `editor-navbar.tsx` Share opens dialog; `editor-layout.tsx` mounts `ShareDialog`
+- [x] `middleware` — `/api/projects(.*)` unchanged (covers nested collaborators routes)
+- [x] `npm run lint` and `npm run build` pass
+
+## Feature 08 — Editor workspace shell (`context/feature-specs/08-editor-workspace-shell.md`)
+
+Completed tasks:
+
+- [x] `lib/project-access.ts` — `getEditorClerkIdentity`, `getProjectAccessibleToEditor`, `resolveProjectCollaboratorMembership` (Feature 09)
+- [x] `lib/editor/server-project-lists.ts` — reuses `getEditorClerkIdentity` (removed duplicate Clerk email derivation)
+- [x] `components/editor/access-denied.tsx` — centered lock icon, short copy, link to `/editor`
+- [x] `app/editor/[projectId]/page.tsx` — async server page: redirect unauthenticated → sign-in path; unauthorized / missing → `AccessDenied`; else `RegisterWorkspaceChrome` + `EditorWorkspaceViewport`
+- [x] `components/editor/editor-workspace-provider.tsx` — workspace chrome + AI sidebar + share dialog state (`clearWorkspaceChrome` resets shell)
+- [x] `components/editor/register-workspace-chrome.tsx` — client mount hook for navbar project context
+- [x] `components/editor/editor-navbar.tsx` — `{name} / Workspace` breadcrumb; labeled Share + AI; Share wired in Feature 09
+- [x] `components/editor/editor-workspace-viewport.tsx` — grid canvas shell (compass + copy) + AI Copilot rail with placeholder cards (`ScrollArea`, `Card`)
+- [x] `components/editor/project-sidebar.tsx` + `lib/editor/editor-pathname.ts` — highlight current workspace row from pathname
+- [x] `npm run lint` and `npm run build` pass
 
 ## Feature 07 — Wire editor home (`context/feature-specs/07-wire-editor-home.md`)
 
@@ -57,7 +87,7 @@ Completed tasks:
 - [x] `components/editor/editor-layout.tsx` + `editor-workspace-provider.tsx` — initial owned/shared props into hook
 - [x] `components/editor/project-sidebar.tsx` — real lists, `Link` to `/editor/[projectId]`
 - [x] `components/editor/project-dialogs.tsx` — room ID preview + mutation errors
-- [x] `app/editor/[projectId]/page.tsx` — minimal workspace shell for post-create navigation
+- [x] `app/editor/[projectId]/page.tsx` — routed shell for post-create navigation (workspace UI + access in Feature 08)
 - [x] `lib/editor/editor-project.ts`, `lib/editor/project-room-id.ts` — sidebar types + room id helpers; removed mock-only `lib/editor/mock-projects.ts`
 - [x] `npm run build` passes
 

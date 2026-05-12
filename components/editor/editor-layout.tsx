@@ -7,6 +7,7 @@ import { EditorWorkspaceProvider } from "@/components/editor/editor-workspace-pr
 import { MobileSidebarScrim } from "@/components/editor/mobile-sidebar-scrim"
 import { ProjectDialogs } from "@/components/editor/project-dialogs"
 import { ProjectSidebar } from "@/components/editor/project-sidebar"
+import { ShareDialog } from "@/components/editor/share-dialog"
 import type { EditorSidebarProject } from "@/lib/editor/editor-project"
 
 export interface EditorLayoutProps {
@@ -34,6 +35,7 @@ function EditorLayoutInner({ children }: { children: ReactNode }) {
       />
       <main className="min-h-screen pt-14">{children}</main>
       <ProjectDialogs />
+      <ShareDialog />
     </div>
   )
 }
