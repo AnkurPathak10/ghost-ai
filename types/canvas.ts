@@ -16,6 +16,22 @@ export type NodeColorSpec = (typeof NODE_COLORS)[number]
 
 export const DEFAULT_NODE_FILL = NODE_COLORS[0].fill
 
+/** Paired label hex for the default node fill (`NODE_COLORS[0]`). */
+export const DEFAULT_NODE_LABEL = NODE_COLORS[0].label
+
+export function resolveNodeColorPair(data: {
+  color?: string
+  labelColor?: string
+}): { fill: string; label: string } {
+  const fill = data.color?.trim() ? data.color : DEFAULT_NODE_FILL
+  const fromPalette = NODE_COLORS.find((c) => c.fill === fill)
+  const label =
+    data.labelColor?.trim() ??
+    fromPalette?.label ??
+    DEFAULT_NODE_LABEL
+  return { fill, label }
+}
+
 /** Supported canvas node shapes (rendering comes later). */
 export const NODE_SHAPES = [
   "rectangle",
@@ -35,6 +51,8 @@ export type CanvasNodeData = {
   label: string
   /** Node fill hex (typically one of `NODE_COLORS`). */
   color: string
+  /** Text/label color hex paired with `color` (typically one of `NODE_COLORS`). */
+  labelColor?: string
   shape: NodeShape
 }
 

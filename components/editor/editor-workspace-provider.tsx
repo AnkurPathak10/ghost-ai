@@ -27,6 +27,9 @@ type WorkspaceContextValue = ReturnType<typeof useProjectDialogs> & {
   shareDialogOpen: boolean
   setShareDialogOpen: (open: boolean) => void
   openShareDialog: () => void
+  starterTemplatesDialogOpen: boolean
+  setStarterTemplatesDialogOpen: (open: boolean) => void
+  openStarterTemplatesDialog: () => void
 }
 
 const EditorWorkspaceContext = createContext<WorkspaceContextValue | undefined>(
@@ -49,6 +52,8 @@ export function EditorWorkspaceProvider({
     useState<WorkspaceChromeProject | null>(null)
   const [aiSidebarOpen, setAiSidebarOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [starterTemplatesDialogOpen, setStarterTemplatesDialogOpen] =
+    useState(false)
 
   const bindWorkspaceChrome = useCallback((project: WorkspaceChromeProject) => {
     setWorkspaceProject(project)
@@ -59,6 +64,7 @@ export function EditorWorkspaceProvider({
     setWorkspaceProject(null)
     setAiSidebarOpen(false)
     setShareDialogOpen(false)
+    setStarterTemplatesDialogOpen(false)
   }, [])
 
   const toggleAiSidebar = useCallback(() => {
@@ -68,6 +74,12 @@ export function EditorWorkspaceProvider({
   const openShareDialog = useCallback(() => {
     if (workspaceProject) {
       setShareDialogOpen(true)
+    }
+  }, [workspaceProject])
+
+  const openStarterTemplatesDialog = useCallback(() => {
+    if (workspaceProject) {
+      setStarterTemplatesDialogOpen(true)
     }
   }, [workspaceProject])
 
@@ -83,6 +95,9 @@ export function EditorWorkspaceProvider({
       shareDialogOpen,
       setShareDialogOpen,
       openShareDialog,
+      starterTemplatesDialogOpen,
+      setStarterTemplatesDialogOpen,
+      openStarterTemplatesDialog,
     }),
     [
       aiSidebarOpen,
@@ -90,7 +105,9 @@ export function EditorWorkspaceProvider({
       clearWorkspaceChrome,
       dialogs,
       openShareDialog,
+      openStarterTemplatesDialog,
       shareDialogOpen,
+      starterTemplatesDialogOpen,
       toggleAiSidebar,
       workspaceProject,
     ]
