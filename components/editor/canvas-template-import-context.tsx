@@ -6,11 +6,10 @@ import {
   useContext,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from "react"
 
-import type { CanvasTemplate } from "@/components/editor/starter-templates"
+import type { CanvasTemplate } from "./starter-templates"
 
 type CanvasTemplateImportContextValue = {
   /** Invokes the collaborative canvas import when the room is mounted; no-op if unset. */
