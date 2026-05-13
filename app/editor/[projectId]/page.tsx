@@ -46,7 +46,7 @@ export default async function EditorWorkspacePage({
   return (
     <>
       <RegisterWorkspaceChrome projectId={project.id} projectName={project.name} />
-      <EditorWorkspaceViewport />
+      <EditorWorkspaceViewport roomId={project.id} />
     </>
   )
 }

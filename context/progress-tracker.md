@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 09 (Share dialog & collaborators API) — complete
+- Feature 12 (Shape panel / drag-create nodes) — complete
 
 ## Current Goal
 
-- Next numbered feature spec after 09 (TBD)
+- Next numbered feature spec after 12 (TBD)
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -43,7 +43,41 @@ Integration / verification:
 
 ## Next Up
 
-- Next numbered feature spec after 09 (TBD).
+- Next numbered feature spec after 12 (TBD).
+
+## Feature 12 — Shape panel (`context/feature-specs/12-shape-panel.md`)
+
+Completed tasks:
+
+- [x] Bottom-center floating pill toolbar — `components/editor/shape-palette.tsx` (`ShapePalette`) + overlay in `components/editor/collaborative-canvas.tsx`
+- [x] Draggable shape icons (rectangle, diamond, circle, pill, cylinder, hexagon) with HTML5 drag payload (shape + default width/height) — `lib/canvas-shape-drag.ts` MIME `application/x-ghost-canvas-shape`
+- [x] `onDragOver` / `onDrop` on `ReactFlow` — `ReactFlowProvider` + `useReactFlow().screenToFlowPosition` for drop coordinates; centered placement via half width/height offset
+- [x] New `canvasNode` instances via `onNodesChange([{ type: "add", item }])` (Liveblocks storage); ids `${shape}-${timestamp}-${counter}` via `nextCanvasShapeNodeId`
+- [x] Custom node renderer — `CanvasNodePlaceholder`: bordered rectangle, centered label, respects dropped `width`/`height`; `data.shape` stored for later SVG shapes
+- [x] `npm run build` passes
+
+## Feature 11 — Base canvas (`context/feature-specs/11-base-canvas.md`)
+
+Completed tasks:
+
+- [x] `types/canvas.ts` — `NODE_COLORS`, `NODE_SHAPES`, `CanvasNodeData` (`label`, `color`, `shape`), types `CanvasNode` (`canvasNode`) / `CanvasEdge` (`canvasEdge`), `EDGE_DEFAULT_STROKE`
+- [x] `liveblocks.config.ts` — `Storage.flow` typed as `LiveblocksFlow<CanvasNode, CanvasEdge>`
+- [x] `components/editor/collaborative-canvas.tsx` — `LiveblocksProvider` (`/api/liveblocks-auth`), `RoomProvider` (project id, `initialPresence` with `cursor: null`, `initialStorage` empty `flow`), `ClientSideSuspense` loading state, `useErrorListener` connection error UI
+- [x] React Flow — `useLiveblocksFlow` with `suspense: true`, empty `nodes` / `edges`, `MiniMap`, dot `Background`, `fitView`, `connectionMode={Loose}`, built-in `SmoothStepEdge` for `canvasEdge`, `Cursors`
+- [x] `app/editor/[projectId]/page.tsx` stays async server page; passes `roomId` into viewport
+- [x] `components/editor/editor-workspace-viewport.tsx` — collaborative canvas in main column (AI rail unchanged)
+- [x] `npm run build` passes
+
+## Feature 10 — Liveblocks setup (`context/feature-specs/10-liveblocks-setup.md`)
+
+Completed tasks:
+
+- [x] Root `liveblocks.config.ts` — `Presence` (`cursor`, `isThinking`), `UserMeta.info` (`name`, `avatar`, `color` for cursor), typed `Storage` / events / metadata stubs
+- [x] `lib/liveblocks-server.ts` — cached `Liveblocks` node client (`getLiveblocks`) + `cursorColorForUserId` palette helper
+- [x] `POST /api/liveblocks-auth` — Clerk session via `getEditorClerkIdentity`, `getProjectAccessibleToEditor` (403), `upsertRoom` private room + `usersAccesses` for Clerk `userId`, `identifyUser` with name / avatar / color
+- [x] `proxy.ts` — `/api/liveblocks-auth` on public API matcher (handler returns JSON `401`, same pattern as project APIs)
+- [x] `@liveblocks/node` dependency aligned with client packages
+- [x] `npm run build` passes
 
 ## Feature 09 — Share dialog (`context/feature-specs/09-share-dialog.md`)
 

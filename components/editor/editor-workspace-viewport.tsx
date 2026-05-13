@@ -1,7 +1,8 @@
 "use client"
 
-import { Bot, Compass, Sparkles } from "lucide-react"
+import { Bot, Sparkles } from "lucide-react"
 
+import { CollaborativeCanvas } from "@/components/editor/collaborative-canvas"
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import {
   Card,
@@ -13,41 +14,13 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
-export function EditorWorkspaceViewport() {
+export function EditorWorkspaceViewport({ roomId }: { roomId: string }) {
   const { aiSidebarOpen } = useEditorWorkspace()
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-base">
-      <div
-        role="presentation"
-        className={cn(
-          "relative flex min-w-0 flex-1 flex-col bg-base bg-size-[32px_32px]",
-          "bg-[linear-gradient(to_right,color-mix(in_srgb,var(--border)_42%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--border)_42%,transparent)_1px,transparent_1px)]"
-        )}
-      >
-        <div className="pointer-events-none absolute inset-0 bg-linear-to-b from-base via-transparent to-base/80" />
-        <div className="relative flex min-h-[calc(100vh-3.5rem)] flex-1 flex-col items-center justify-center px-6 py-14">
-          <div className="flex max-w-lg flex-col items-center text-center">
-            <div
-              className="flex size-17 items-center justify-center rounded-full border border-surface-border bg-elevated shadow-sm"
-              aria-hidden
-            >
-              <Compass className="size-8 text-brand" strokeWidth={1.25} />
-            </div>
-            <p className="mt-8 text-[0.6875rem] font-medium tracking-[0.2em] text-copy-muted uppercase">
-              Workspace shell
-            </p>
-            <h2 className="mt-3 text-xl font-semibold tracking-tight text-copy-primary md:text-2xl">
-              Canvas and collaboration tooling land here next.
-            </h2>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-copy-secondary">
-              This area is wired for shared architecture canvases and AI-backed
-              workflows. For now it only carries project context and navigation;
-              Liveblocks, nodes, and copilot replies stay out of scope until the
-              next milestones.
-            </p>
-          </div>
-        </div>
+      <div className="relative flex min-w-0 flex-1 flex-col bg-base">
+        <CollaborativeCanvas roomId={roomId} />
       </div>
       <aside
         aria-hidden={!aiSidebarOpen}
@@ -58,7 +31,8 @@ export function EditorWorkspaceViewport() {
             : "w-0 overflow-hidden border-transparent opacity-0"
         )}
       >
-        <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">          <div className="shrink-0 border-b border-surface-border px-5 py-4">
+        <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">
+          <div className="shrink-0 border-b border-surface-border px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold leading-snug tracking-tight text-copy-primary">
                 AI Chatbox
