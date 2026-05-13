@@ -91,12 +91,6 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
     setEditing(false)
   }, [])
 
-  useEffect(() => {
-    if (!editing) {
-      setDraftLabel(props.data.label ?? "")
-    }
-  }, [props.data.label, editing])
-
   return (
     <>
       <NodeToolbar

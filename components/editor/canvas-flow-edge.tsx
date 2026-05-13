@@ -72,10 +72,6 @@ function CanvasFlowEdge(props: EdgeProps<CanvasEdge>) {
   )
 
   useEffect(() => {
-    setDraft(labelText(label))
-  }, [label])
-
-  useEffect(() => {
     if (!editing) return
     const raf = requestAnimationFrame(() => {
       const el = inputRef.current
