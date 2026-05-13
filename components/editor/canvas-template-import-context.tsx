@@ -24,11 +24,9 @@ const CanvasTemplateImportContext =
 
 export function CanvasTemplateImportProvider({ children }: { children: ReactNode }) {
   const handlerRef = useRef<((t: CanvasTemplate) => void) | null>(null)
-  const [, force] = useState(0)
 
   const setImportHandler = useCallback((fn: ((t: CanvasTemplate) => void) | null) => {
     handlerRef.current = fn
-    force((n) => n + 1)
   }, [])
 
   const importTemplate = useCallback((template: CanvasTemplate) => {

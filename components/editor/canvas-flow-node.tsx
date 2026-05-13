@@ -54,9 +54,8 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
   const { fill: nodeFill, label: textColor } = resolveNodeColorPair(props.data)
 
   const [editing, setEditing] = useState(false)
-  const [draftLabel, setDraftLabel] = useState(props.data.label)
+  const [draftLabel, setDraftLabel] = useState(props.data.label ?? "")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-
   useEffect(() => {
     if (!editing) return
     const id = requestAnimationFrame(() => {
@@ -74,7 +73,7 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
     (e: ReactMouseEvent) => {
       e.stopPropagation()
       e.preventDefault()
-      setDraftLabel(props.data.label)
+      setDraftLabel(props.data.label ?? "")
       setEditing(true)
     },
     [props.data.label]
@@ -94,7 +93,7 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
 
   useEffect(() => {
     if (!editing) {
-      setDraftLabel(props.data.label)
+      setDraftLabel(props.data.label ?? "")
     }
   }, [props.data.label, editing])
 

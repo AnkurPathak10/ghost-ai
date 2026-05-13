@@ -51,7 +51,7 @@ export function ProjectSidebar({ isOpen, onClose, className }: ProjectSidebarPro
             aria-label="Close sidebar"
             onClick={onClose}
           >
-            <X className="h-5 w-5" aria-hidden />
+            <X className="h-5 w-5" aria-hidden={true} />          
           </Button>
         </div>
 
