@@ -1,7 +1,7 @@
 "use client"
 
 import { UserButton } from "@clerk/nextjs"
-import { PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
+import { LayoutTemplate, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
 
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import { Button } from "@/components/ui/button"
@@ -23,6 +23,7 @@ export function EditorNavbar({
     aiSidebarOpen,
     toggleAiSidebar,
     openShareDialog,
+    openStarterTemplatesDialog,
   } = useEditorWorkspace()
 
   return (
@@ -64,6 +65,21 @@ export function EditorNavbar({
         <div className="flex shrink-0 items-center justify-end gap-2">
           {workspaceProject ? (
             <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className={cn(
+                  "h-9 gap-2 rounded-xl border border-surface-border bg-elevated px-3.5 font-medium text-copy-primary",
+                  "[&_svg]:text-copy-secondary [&_svg]:opacity-90",
+                  "hover:bg-subtle hover:text-copy-primary [&_svg]:hover:opacity-100"
+                )}
+                aria-label="Import starter template"
+                onClick={openStarterTemplatesDialog}
+              >
+                <LayoutTemplate className="size-4" aria-hidden />
+                Templates
+              </Button>
               <Button
                 type="button"
                 variant="ghost"

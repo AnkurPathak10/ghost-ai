@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 12 (Shape panel / drag-create nodes) — complete
+- Feature 18 (Starter template) — complete
 
 ## Current Goal
 
-- Next numbered feature spec after 12 (TBD)
+- Next numbered feature spec after 18 (TBD)
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -43,7 +43,69 @@ Integration / verification:
 
 ## Next Up
 
-- Next numbered feature spec after 12 (TBD).
+- Next numbered feature spec after 18 (TBD).
+
+## Feature 18 — Starter template (`context/feature-specs/18-starter-template.md`)
+
+Completed tasks:
+
+- [x] `components/editor/starter-templates.ts` — `CanvasTemplate`, `CANVAS_TEMPLATES` (microservices, CI/CD pipeline, event-driven), `tplNode` / `tplEdge` helpers, `NODE_COLORS`-backed fills + paired label colors, typed `CanvasNode` / `canvasEdge` edges with handle ids
+- [x] `components/editor/starter-templates-modal.tsx` — dialog + grid; outlined Import; `TemplateDiagramPreview` uses `viewBox` SVG + `foreignObject` thumbnails
+- [x] `components/editor/canvas-flow-node.tsx` — node shell respects `width`/`height` from data (removed `min-h-16` / `min-w-[128px]` that inflated the DOM box vs smaller template nodes, which misaligned labels, handles, and edges)
+- [x] `components/editor/canvas-template-import-context.tsx` — register runner from room canvas; `StarterTemplatesModal` calls `importTemplate` + closes dialog
+- [x] `components/editor/collaborative-canvas.tsx` — `setImportHandler`: remove all edges then nodes, add template nodes then edges (`structuredClone`), `fitView` with duration after import; wired inside Liveblocks flow
+- [x] `components/editor/editor-workspace-provider.tsx` + `editor-layout.tsx` — `starterTemplatesDialogOpen` / `openStarterTemplatesDialog`; `CanvasTemplateImportProvider` wraps layout; `StarterTemplatesModal` mounted with `ShareDialog`
+- [x] `components/editor/editor-navbar.tsx` — “Templates” (`LayoutTemplate`) opens modal when workspace is bound
+- [x] `npm run build` passes
+
+## Feature 17 — Canvas ergonomics (`context/feature-specs/17-canvas-ergonomics.md`)
+
+Completed tasks:
+
+- [x] Floating pill control bar — `components/editor/canvas-viewport-controls.tsx` (`CanvasViewportControls`): bottom-left (`z-20`), zoom group (out / fit / in) + thin divider + undo/redo; styling aligned with shape palette; above overlapping z-order vs `ShapePalette`
+- [x] Zoom — `useReactFlow` `zoomIn` / `zoomOut` / `fitView` with `duration` (~280ms) for smooth viewport transitions
+- [x] History — `useUndo` / `useRedo` / `useCanUndo` / `useCanRedo` from `@liveblocks/react/suspense`; buttons `disabled` when stack empty + `opacity-35` on disabled
+- [x] `hooks/useKeyboardShortcuts.ts` — window `keydown`; `+`/`=` zoom in, `-` zoom out (with animation duration); `Cmd/Ctrl+Z` undo, `Cmd/Ctrl+Shift+Z` and `Cmd/Ctrl+Y` redo; skips shortcuts when target is input / textarea / select / contenteditable
+- [x] MiniMap removed from `components/editor/collaborative-canvas.tsx`
+- [x] `npm run build` passes
+
+## Feature 16 — Edge behavior (`context/feature-specs/16-edge-behavior.md`)
+
+Completed tasks:
+
+- [x] Connection handles — all four sides (`Position` top/right/bottom/left) with overlapping target + source pairs and tiny offsets so both are usable; subtle white dots + dark border (`!border-neutral-950/90`), `nodrag`/`nopan`, hidden until `group-hover`; `components/editor/canvas-flow-node.tsx`
+- [x] Default edge styling — light rounded stroke, arrow end marker, smooth-step connection line while dragging; `defaultEdgeOptions` + `connectionLineType` / `connectionLineStyle`; `components/editor/collaborative-canvas.tsx`
+- [x] Custom edge — `getSmoothStepPath` right-angle routing + `BaseEdge`, dim at rest / brighter on hover + selection, wide `interactionWidth`; `components/editor/canvas-flow-edge.tsx` (`MemoCanvasFlowEdge`)
+- [x] Inline labels — double-click edge to edit; label at `getSmoothStepPath` midpoint via `EdgeLabelRenderer` + returned `labelX`/`labelY`; growing pill input (`field-sizing-content`, `size`), blur/Enter/Escape commit via `updateEdge`; badge + faint hint when selected/hovered with no label; pointer capture + `nopan`/`nodrag` on label UI; labels stored on edge `label` field (Liveblocks-synced)
+- [x] `npm run build` passes
+
+## Feature 15 — Node color toolbar (`context/feature-specs/15-nodes-color-toolbar.md`)
+
+Completed tasks:
+
+- [x] Palette — continued `NODE_COLORS` pairs in `types/canvas.ts`; added optional `CanvasNodeData.labelColor`, `DEFAULT_NODE_LABEL`, and `resolveNodeColorPair()` for fill + paired label text
+- [x] Floating toolbar — `@xyflow/react` `NodeToolbar` (`Position.Top`, offset 14) + `components/editor/node-color-swatches.tsx`: one swatch per theme, active double ring (accent + base offset), tight hover glow from swatch text color; `nodrag` / `nopan` + `stopPropagation` on pointer events
+- [x] `updateNodeData` sets `color` + `labelColor`; node label / placeholder / textarea use `resolveNodeColorPair` for text color; new drops get `labelColor: DEFAULT_NODE_LABEL` in `collaborative-canvas.tsx`
+- [x] No drag/drop, selection, or picker changes beyond scope
+- [x] `npm run build` passes
+
+## Feature 14 — Node editing (`context/feature-specs/14-node-editing.md`)
+
+Completed tasks:
+
+- [x] Resize — `@xyflow/react` `NodeResizer` in `components/editor/canvas-flow-node.tsx` when `selected`; `minWidth` / `minHeight` (96×48); subtle handles (elevated fill, `surface-border`) and dim resize lines; dimensions flow through existing `onNodesChange` / Liveblocks `dimensions` updates
+- [x] Inline label — double-click label area opens a centered `textarea` over the same region (`inset-3`), `nodrag` + `nopan` and `stopPropagation` on pointer/mouse down; live `updateNodeData` / `patchLabel` while typing; empty state shows muted `Add label…`; blur + `Escape` closes editing; draft syncs from `data.label` when not editing (remote updates)
+- [x] Shape panel, drag preview, drop/create, and `CanvasNodeSurface` unchanged per scope
+- [x] `npm run build` passes
+
+## Feature 13 — Node shape (`context/feature-specs/13-node-shape.md`)
+
+Completed tasks:
+
+- [x] Real shape rendering for `canvasNode` — `components/editor/canvas-node-surface.tsx` (`CanvasNodeSurface`): CSS for `rectangle`, `pill`, `circle`; SVG (scaled via `viewBox` + `preserveAspectRatio="none"`) for `diamond`, `hexagon`, `cylinder`; borders use `var(--color-border-default)` at rest and `var(--color-accent-primary)` when `selected`
+- [x] Flow node composition — `components/editor/canvas-flow-node.tsx` (`MemoCanvasFlowNode`): surface + centered label + four-side handles; wired in `components/editor/collaborative-canvas.tsx` as `nodeTypes.canvasNode`
+- [x] Shape drag ghost — `components/editor/shape-palette.tsx`: transparent `setDragImage`, document `drag` listener to follow cursor, `dragend` clears ghost; ghost reuses `CanvasNodeSurface` with same default size/fill as drop (`DEFAULT_NEW_NODE_COLOR` / `buildShapeDragPayload`); palette layout and drop/create flow unchanged
+- [x] `npm run build` passes
 
 ## Feature 12 — Shape panel (`context/feature-specs/12-shape-panel.md`)
 
@@ -63,7 +125,7 @@ Completed tasks:
 - [x] `types/canvas.ts` — `NODE_COLORS`, `NODE_SHAPES`, `CanvasNodeData` (`label`, `color`, `shape`), types `CanvasNode` (`canvasNode`) / `CanvasEdge` (`canvasEdge`), `EDGE_DEFAULT_STROKE`
 - [x] `liveblocks.config.ts` — `Storage.flow` typed as `LiveblocksFlow<CanvasNode, CanvasEdge>`
 - [x] `components/editor/collaborative-canvas.tsx` — `LiveblocksProvider` (`/api/liveblocks-auth`), `RoomProvider` (project id, `initialPresence` with `cursor: null`, `initialStorage` empty `flow`), `ClientSideSuspense` loading state, `useErrorListener` connection error UI
-- [x] React Flow — `useLiveblocksFlow` with `suspense: true`, empty `nodes` / `edges`, `MiniMap`, dot `Background`, `fitView`, `connectionMode={Loose}`, built-in `SmoothStepEdge` for `canvasEdge`, `Cursors`
+- [x] React Flow — `useLiveblocksFlow` with `suspense: true`, empty `nodes` / `edges`, dot `Background`, `fitView`, `connectionMode={Loose}`, `canvasEdge` type (now custom `MemoCanvasFlowEdge`; was `SmoothStepEdge` in initial deliverable), `Cursors` (initial build also had `MiniMap`; removed in Feature 17)
 - [x] `app/editor/[projectId]/page.tsx` stays async server page; passes `roomId` into viewport
 - [x] `components/editor/editor-workspace-viewport.tsx` — collaborative canvas in main column (AI rail unchanged)
 - [x] `npm run build` passes

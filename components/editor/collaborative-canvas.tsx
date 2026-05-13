@@ -11,101 +11,42 @@ import { Cursors, useLiveblocksFlow } from "@liveblocks/react-flow"
 import {
   Background,
   BackgroundVariant,
+  ConnectionLineType,
   ConnectionMode,
-  Handle,
   MarkerType,
-  MiniMap,
-  Position,
   ReactFlow,
   ReactFlowProvider,
-  SmoothStepEdge,
   useReactFlow,
-  type NodeProps,
 } from "@xyflow/react"
 import { Loader2 } from "lucide-react"
-import {
-  memo,
-  useCallback,
-  useState,
-  type CSSProperties,
-  type DragEvent,
-  type ReactNode,
-} from "react"
+import { useCallback, useEffect, useState, type DragEvent, type ReactNode } from "react"
 
+import { useCanvasTemplateImport } from "@/components/editor/canvas-template-import-context"
+
+import type { CanvasTemplate } from "@/components/editor/starter-templates"
+import { MemoCanvasFlowEdge } from "@/components/editor/canvas-flow-edge"
+import { MemoCanvasFlowNode } from "@/components/editor/canvas-flow-node"
+import { CanvasViewportControls } from "@/components/editor/canvas-viewport-controls"
+import { ShapePalette } from "@/components/editor/shape-palette"
 import {
   CANVAS_SHAPE_DRAG_MIME,
   DEFAULT_NEW_NODE_COLOR,
   nextCanvasShapeNodeId,
   parseShapeDragPayload,
 } from "@/lib/canvas-shape-drag"
-import { cn } from "@/lib/utils"
 import {
-  DEFAULT_NODE_FILL,
+  DEFAULT_NODE_LABEL,
   EDGE_DEFAULT_STROKE,
   type CanvasEdge,
   type CanvasNode,
-  type NodeShape,
 } from "@/types/canvas"
-
-import { ShapePalette } from "@/components/editor/shape-palette"
 
 import "@liveblocks/react-flow/styles.css"
 import "@liveblocks/react-ui/styles.css"
 import "@xyflow/react/dist/style.css"
 
-/**
- * Minimal placeholder for `canvasNode` — shape/color styling ships in a later spec.
- * Handles match the four-sided connection model from `context/ui-context.md`.
- */
-function CanvasNodePlaceholder(props: NodeProps<CanvasNode>) {
-  const shape: NodeShape = props.data.shape ?? "rectangle"
-  const handleClass =
-    "!size-2 !border !border-white !bg-white opacity-0 transition-opacity group-hover:opacity-100"
-  const width = props.width
-  const height = props.height
-
-  return (
-    <div
-      data-shape={shape}
-      className={cn(
-        "group relative box-border flex min-h-16 min-w-[128px] items-center justify-center rounded-lg border border-surface-border px-3 py-2 text-center text-sm shadow-sm",
-        "bg-[color:var(--canvas-node-fill)] text-copy-primary"
-      )}
-      style={
-        {
-          "--canvas-node-fill": props.data.color || DEFAULT_NODE_FILL,
-          ...(width !== undefined ? { width } : null),
-          ...(height !== undefined ? { height } : null),
-        } as CSSProperties
-      }
-    >
-      <Handle
-        type="target"
-        position={Position.Left}
-        className={handleClass}
-      />
-      <Handle
-        type="target"
-        position={Position.Top}
-        className={handleClass}
-      />
-      <span className="w-full truncate">{props.data.label || "\u00a0"}</span>
-      <Handle
-        type="source"
-        position={Position.Right}
-        className={handleClass}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className={handleClass}
-      />
-    </div>
-  )
-}
-
-const nodeTypes = { canvasNode: memo(CanvasNodePlaceholder) }
-const edgeTypes = { canvasEdge: SmoothStepEdge }
+const nodeTypes = { canvasNode: MemoCanvasFlowNode }
+const edgeTypes = { canvasEdge: MemoCanvasFlowEdge }
 
 function CollaborativeFlowCanvasInner() {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
@@ -115,7 +56,44 @@ function CollaborativeFlowCanvasInner() {
       edges: { initial: [] },
     })
 
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, fitView } = useReactFlow<CanvasNode, CanvasEdge>()
+  const { setImportHandler } = useCanvasTemplateImport()
+
+  const importStarterTemplate = useCallback(
+    (template: CanvasTemplate) => {
+      if (edges.length > 0) {
+        onEdgesChange(edges.map((e) => ({ type: "remove", id: e.id })))
+      }
+      if (nodes.length > 0) {
+        onNodesChange(nodes.map((n) => ({ type: "remove", id: n.id })))
+      }
+      if (template.nodes.length > 0) {
+        onNodesChange(
+          template.nodes.map((item) => ({
+            type: "add" as const,
+            item: structuredClone(item),
+          }))
+        )
+      }
+      if (template.edges.length > 0) {
+        onEdgesChange(
+          template.edges.map((item) => ({
+            type: "add" as const,
+            item: structuredClone(item),
+          }))
+        )
+      }
+      window.setTimeout(() => {
+        void fitView({ padding: 0.2, duration: 320 })
+      }, 0)
+    },
+    [edges, nodes, onEdgesChange, onNodesChange, fitView]
+  )
+
+  useEffect(() => {
+    setImportHandler(importStarterTemplate)
+    return () => setImportHandler(null)
+  }, [importStarterTemplate, setImportHandler])
 
   const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
     e.preventDefault()
@@ -145,6 +123,7 @@ function CollaborativeFlowCanvasInner() {
         data: {
           label: "",
           color: DEFAULT_NEW_NODE_COLOR,
+          labelColor: DEFAULT_NODE_LABEL,
           shape: payload.shape,
         },
       }
@@ -170,6 +149,13 @@ function CollaborativeFlowCanvasInner() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineStyle={{
+          stroke: EDGE_DEFAULT_STROKE,
+          strokeWidth: 1.5,
+          strokeLinecap: "round",
+          opacity: 0.52,
+        }}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         defaultEdgeOptions={{
@@ -177,8 +163,15 @@ function CollaborativeFlowCanvasInner() {
           markerEnd: {
             type: MarkerType.ArrowClosed,
             color: EDGE_DEFAULT_STROKE,
+            width: 20,
+            height: 20,
           },
-          style: { stroke: EDGE_DEFAULT_STROKE },
+          style: {
+            stroke: EDGE_DEFAULT_STROKE,
+            strokeWidth: 1.5,
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+          },
         }}
         proOptions={{ hideAttribution: true }}
       >
@@ -188,17 +181,9 @@ function CollaborativeFlowCanvasInner() {
           size={1}
           color="var(--color-border-default)"
         />
-        <MiniMap
-          className="rounded-xl! border! border-surface-border!"
-          bgColor="var(--color-bg-subtle)"
-          maskColor="color-mix(in srgb, var(--color-bg-base) 72%, transparent)"
-          maskStrokeColor="var(--color-border-default)"
-          maskStrokeWidth={1}
-          nodeColor="var(--color-bg-elevated)"
-          nodeStrokeColor="var(--color-border-subtle)"
-        />
         <Cursors />
       </ReactFlow>
+      <CanvasViewportControls />
       <ShapePalette />
     </div>
   )
