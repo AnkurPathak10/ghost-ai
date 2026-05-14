@@ -6,11 +6,18 @@ import {
   useContext,
   useMemo,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from "react"
 
+import type {
+  AiArchitectChatMessage,
+  AiArchitectChatRole,
+} from "@/lib/editor/ai-workspace-chat"
 import type { EditorSidebarProject } from "@/lib/editor/editor-project"
 import { useProjectDialogs } from "@/hooks/use-project-dialogs"
+import type { CanvasSaveStatus } from "@/hooks/use-canvas-autosave"
 
 export interface WorkspaceChromeProject {
   id: string
@@ -30,6 +37,16 @@ type WorkspaceContextValue = ReturnType<typeof useProjectDialogs> & {
   starterTemplatesDialogOpen: boolean
   setStarterTemplatesDialogOpen: (open: boolean) => void
   openStarterTemplatesDialog: () => void
+  canvasSaveStatus: CanvasSaveStatus
+  setCanvasSaveStatus: (status: CanvasSaveStatus) => void
+  aiArchitectMessages: AiArchitectChatMessage[]
+  setAiArchitectMessages: Dispatch<
+    SetStateAction<AiArchitectChatMessage[]>
+  >
+  appendAiArchitectMessage: (
+    content: string,
+    role?: AiArchitectChatRole
+  ) => void
 }
 
 const EditorWorkspaceContext = createContext<WorkspaceContextValue | undefined>(
@@ -54,10 +71,32 @@ export function EditorWorkspaceProvider({
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [starterTemplatesDialogOpen, setStarterTemplatesDialogOpen] =
     useState(false)
+  const [canvasSaveStatus, setCanvasSaveStatus] =
+    useState<CanvasSaveStatus>("idle")
+  const [aiArchitectMessages, setAiArchitectMessages] = useState<
+    AiArchitectChatMessage[]
+  >([])
+
+  const appendAiArchitectMessage = useCallback(
+    (content: string, role: AiArchitectChatRole = "assistant") => {
+      const trimmed = content.trim()
+      if (!trimmed) return
+      setAiArchitectMessages((prev) => [
+        ...prev,
+        {
+          id: `m-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          role,
+          content: trimmed,
+        },
+      ])
+    },
+    []
+  )
 
   const bindWorkspaceChrome = useCallback((project: WorkspaceChromeProject) => {
     setWorkspaceProject(project)
     setAiSidebarOpen(true)
+    setAiArchitectMessages([])
   }, [])
 
   const clearWorkspaceChrome = useCallback(() => {
@@ -65,6 +104,8 @@ export function EditorWorkspaceProvider({
     setAiSidebarOpen(false)
     setShareDialogOpen(false)
     setStarterTemplatesDialogOpen(false)
+    setCanvasSaveStatus("idle")
+    setAiArchitectMessages([])
   }, [])
 
   const toggleAiSidebar = useCallback(() => {
@@ -98,10 +139,18 @@ export function EditorWorkspaceProvider({
       starterTemplatesDialogOpen,
       setStarterTemplatesDialogOpen,
       openStarterTemplatesDialog,
+      canvasSaveStatus,
+      setCanvasSaveStatus,
+      aiArchitectMessages,
+      setAiArchitectMessages,
+      appendAiArchitectMessage,
     }),
     [
+      aiArchitectMessages,
       aiSidebarOpen,
+      appendAiArchitectMessage,
       bindWorkspaceChrome,
+      canvasSaveStatus,
       clearWorkspaceChrome,
       dialogs,
       openShareDialog,

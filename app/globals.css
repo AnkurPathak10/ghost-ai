@@ -49,6 +49,11 @@
   --color-copy-faint: var(--color-text-faint);
   --color-brand: var(--color-accent-primary);
   --color-accent-dim: var(--color-accent-primary-dim);
+  /* Feature 20 AI sidebar — aliases for ui token class names */
+  --color-primary-text: var(--color-text-primary);
+  --color-muted-text: var(--color-text-muted);
+  --color-accent-text: var(--color-accent-ai-text);
+  --color-brand-dim: var(--color-accent-primary-dim);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);

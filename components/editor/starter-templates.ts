@@ -1,5 +1,5 @@
 import type { CanvasEdge, CanvasNode } from "@/types/canvas"
-import { DEFAULT_NODE_LABEL, NODE_COLORS } from "@/types/canvas"
+import { NODE_COLORS } from "@/types/canvas"
 import type { NodeShape } from "@/types/canvas"
 
 const neutral = NODE_COLORS[0]

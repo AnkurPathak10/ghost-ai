@@ -1,13 +1,18 @@
 import type { LiveblocksFlow } from "@liveblocks/react-flow"
 
+import type { AiDesignStatusEventPayload } from "@/lib/design-agent/constants"
 import type { CanvasEdge, CanvasNode } from "@/types/canvas"
+import type {
+  AiChatFeedMessageData,
+  AiStatusFeedMessageData,
+} from "@/types/tasks"
 
 // Liveblocks app typings — https://liveblocks.io/docs/api-reference/liveblocks-react#Typing-your-data
 declare global {
   interface Liveblocks {
     Presence: {
       cursor: { x: number; y: number } | null
-      isThinking: boolean
+      thinking: boolean
     }
 
     Storage: {
@@ -25,7 +30,13 @@ declare global {
       }
     }
 
-    RoomEvent: Record<string, never>
+    RoomEvent: AiDesignStatusEventPayload
+
+    /**
+     * `data` shape for Liveblocks room feed messages (`ai-status-feed`, `ai-chat`; see `types/tasks.ts`).
+     */
+    FeedMessageData: AiStatusFeedMessageData | AiChatFeedMessageData
+
     ThreadMetadata: Record<string, never>
     RoomInfo: Record<string, never>
   }

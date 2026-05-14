@@ -1,0 +1,9 @@
+model TaskRun {
+  runId     String   @id
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@index([userId, projectId])
+}

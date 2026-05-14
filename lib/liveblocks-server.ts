@@ -1,9 +1,9 @@
 import "server-only"
 
-import { Liveblocks } from "@liveblocks/node"
+import { createLiveblocksClient } from "@/lib/liveblocks-node-client"
 
 const globalForLiveblocks = globalThis as unknown as {
-  liveblocks?: Liveblocks
+  liveblocks?: ReturnType<typeof createLiveblocksClient>
 }
 
 /** Distinct, readable cursor colors for multiplayer overlays */
@@ -22,13 +22,9 @@ const CURSOR_COLOR_PALETTE = [
   "#facc15",
 ] as const
 
-export function getLiveblocks(): Liveblocks {
-  const secret = process.env.LIVEBLOCKS_SECRET_KEY
-  if (!secret) {
-    throw new Error("LIVEBLOCKS_SECRET_KEY is not set")
-  }
+export function getLiveblocks(): ReturnType<typeof createLiveblocksClient> {
   if (!globalForLiveblocks.liveblocks) {
-    globalForLiveblocks.liveblocks = new Liveblocks({ secret })
+    globalForLiveblocks.liveblocks = createLiveblocksClient()
   }
   return globalForLiveblocks.liveblocks
 }

@@ -24,7 +24,7 @@
 
 ## Storage Model
 
-- **Prisma Client**: uses Prisma Accelerate when `DATABASE_URL` starts with `prisma+postgres://` or `prisma://`; otherwise connects with the PostgreSQL driver via `@prisma/adapter-pg` and `pg`.
+- **Prisma Client**: uses Prisma Accelerate when `DATABASE_URL` starts with `prisma+postgres://` or `prisma://`; otherwise connects with the PostgreSQL driver via `@prisma/adapter-pg` and `pg`. The exported `prisma` singleton is recreated when `DATABASE_URL` changes (via an env fingerprint) so Next.js dev HMR does not keep a stale client—for example after switching between Accelerate and direct URLs or regenerating the client after schema changes. For models and nested writes that Accelerate does not expose (for example `TaskRun`), API routes use `getUnacceleratedPrisma()` in `lib/prisma.ts`, backed by `DIRECT_DATABASE_URL` when `DATABASE_URL` uses Accelerate — a normal `postgresql://` URL to the same database. When not using Accelerate, that helper returns the same direct Postgres client as the default export.
 - **Database**: metadata, ownership, relationships, and task run records.
 - **Vercel Blob**: generated artifacts — canvas snapshots at `canvas/{projectId}.json` and specs at `specs/{projectId}/{specId}.md`.
 - Project records, spec records, and task run records belong in PostgreSQL.
@@ -38,6 +38,7 @@
 - Only authenticated users can access protected routes.
 - Only the owner or a collaborator can mutate project resources.
 - Liveblocks room tokens are issued only after verifying project membership.
+- The editor workspace uses one Liveblocks room (project id) for both the canvas and the AI sidebar so presence, storage, and the `ai-status-feed` stay in sync for all participants.
 
 ## Starter System Designs
 
