@@ -10,6 +10,7 @@ const isPublicRoute = createRouteMatcher([
   `${signInPath}(.*)`,
   `${signUpPath}(.*)`,
   "/api/projects(.*)",
+  "/api/ai(.*)",
   "/api/liveblocks-auth",
 ])
 

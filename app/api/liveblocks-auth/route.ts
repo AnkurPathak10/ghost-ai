@@ -5,6 +5,7 @@ import {
   jsonForbidden,
   jsonUnauthorized,
 } from "@/lib/api/http"
+import { ensureDefaultEditorFeeds } from "@/lib/liveblocks-ensure-feeds"
 import { cursorColorForUserId, getLiveblocks } from "@/lib/liveblocks-server"
 import {
   getEditorClerkIdentity,
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
     },
   })
 
+  await ensureDefaultEditorFeeds(liveblocks, projectId)
+
   const user = await currentUser()
   const displayName =
     user?.fullName?.trim() ||
@@ -56,13 +59,25 @@ export async function POST(request: Request) {
   const avatarUrl = user?.imageUrl ?? ""
   const color = cursorColorForUserId(identity.userId)
 
-  const { status, body } = await liveblocks.identifyUser(identity.userId, {
+  const session = liveblocks.prepareSession(identity.userId, {
     userInfo: {
       name: displayName,
       avatar: avatarUrl,
       color,
     },
   })
+
+  /** `room:write` alone does not include Feeds; sidebar `ai-chat` / `ai-status-feed` require `feeds:write`. */
+  session.allow(projectId, ["room:write", "feeds:write"])
+
+  const { status, body, error } = await session.authorize()
+  if (error !== undefined) {
+    console.error("[liveblocks-auth] session.authorize failed", error)
+    return Response.json(
+      { error: "Could not issue Liveblocks session token" },
+      { status: 502 }
+    )
+  }
 
   return new Response(body, { status })
 }

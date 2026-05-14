@@ -3,7 +3,7 @@
 import type { Edge, Node, ReactFlowInstance } from "@xyflow/react"
 import { useEffect } from "react"
 
-function isEditableFieldTarget(target: EventTarget | null): boolean {
+export function isEditableFieldTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   if (target.isContentEditable) return true
   const tag = target.tagName
@@ -73,4 +73,26 @@ export function useKeyboardShortcuts<
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [reactFlow, onUndo, onRedo])
+}
+
+/**
+ * Delete / Backspace removes selected nodes and edges (React Flow selection).
+ * Skips when focus is in an editable field, matching `useKeyboardShortcuts`.
+ */
+export function useCanvasDeleteShortcut(deleteSelection: () => void): void {
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditableFieldTarget(e.target)) {
+        return
+      }
+      if (e.key !== "Delete" && e.key !== "Backspace") {
+        return
+      }
+      e.preventDefault()
+      deleteSelection()
+    }
+
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [deleteSelection])
 }

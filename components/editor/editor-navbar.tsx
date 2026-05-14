@@ -1,7 +1,17 @@
 "use client"
 
 import { UserButton } from "@clerk/nextjs"
-import { LayoutTemplate, PanelLeftClose, PanelLeftOpen, Share2, Sparkles } from "lucide-react"
+import {
+  AlertCircle,
+  Check,
+  LayoutTemplate,
+  Loader2,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Save,
+  Share2,
+  Sparkles,
+} from "lucide-react"
 
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import { Button } from "@/components/ui/button"
@@ -24,6 +34,7 @@ export function EditorNavbar({
     toggleAiSidebar,
     openShareDialog,
     openStarterTemplatesDialog,
+    canvasSaveStatus,
   } = useEditorWorkspace()
 
   return (
@@ -79,6 +90,49 @@ export function EditorNavbar({
               >
                 <LayoutTemplate className="size-4" aria-hidden />
                 Templates
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                className={cn(
+                  "h-9 gap-2 rounded-xl border border-surface-border bg-elevated px-3.5 font-medium text-copy-primary",
+                  "[&_svg]:text-copy-secondary [&_svg]:opacity-90",
+                  "hover:bg-subtle hover:text-copy-primary [&_svg]:hover:opacity-100",
+                  canvasSaveStatus === "error" &&
+                    "border-state-error/40 bg-elevated text-state-error [&_svg]:text-state-error"
+                )}
+                aria-live="polite"
+                disabled={canvasSaveStatus === "saving"}
+                aria-label={
+                  canvasSaveStatus === "saving"
+                    ? "Saving canvas"
+                    : canvasSaveStatus === "error"
+                      ? "Canvas save failed"
+                      : "Canvas save status"
+                }
+              >
+                {canvasSaveStatus === "saving" ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    <span className="hidden sm:inline">Saving…</span>
+                  </>
+                ) : canvasSaveStatus === "saved" ? (
+                  <>
+                    <Check className="size-4 text-state-success" aria-hidden />
+                    <span className="hidden sm:inline">Saved</span>
+                  </>
+                ) : canvasSaveStatus === "error" ? (
+                  <>
+                    <AlertCircle className="size-4" aria-hidden />
+                    <span className="hidden sm:inline">Save failed</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="size-4" aria-hidden />
+                    <span className="hidden sm:inline text-copy-muted">Saved</span>
+                  </>
+                )}
               </Button>
               <Button
                 type="button"

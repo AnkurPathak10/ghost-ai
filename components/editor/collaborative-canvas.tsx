@@ -1,13 +1,11 @@
 "use client"
 
-import { LiveblocksError, LiveMap, LiveObject } from "@liveblocks/client"
 import {
   ClientSideSuspense,
-  LiveblocksProvider,
-  RoomProvider,
-  useErrorListener,
+  useRoom,
+  useUpdateMyPresence,
 } from "@liveblocks/react/suspense"
-import { Cursors, useLiveblocksFlow } from "@liveblocks/react-flow"
+import { useLiveblocksFlow } from "@liveblocks/react-flow"
 import {
   Background,
   BackgroundVariant,
@@ -17,23 +15,28 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useStoreApi,
 } from "@xyflow/react"
 import { Loader2 } from "lucide-react"
-import { useCallback, useEffect, useState, type DragEvent, type ReactNode } from "react"
 
-import { useCanvasTemplateImport } from "@/components/editor/canvas-template-import-context"
+import { CanvasPeerCursors } from "@/components/editor/canvas-peer-cursors"
+import { CanvasPresenceBar } from "@/components/editor/canvas-presence-bar"
 
-import type { CanvasTemplate } from "@/components/editor/starter-templates"
 import { MemoCanvasFlowEdge } from "@/components/editor/canvas-flow-edge"
 import { MemoCanvasFlowNode } from "@/components/editor/canvas-flow-node"
 import { CanvasViewportControls } from "@/components/editor/canvas-viewport-controls"
 import { ShapePalette } from "@/components/editor/shape-palette"
+import { useCanvasTemplateImport } from "@/components/editor/canvas-template-import-context"
+import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
+import type { CanvasTemplate } from "@/components/editor/starter-templates"
 import {
   CANVAS_SHAPE_DRAG_MIME,
   DEFAULT_NEW_NODE_COLOR,
   nextCanvasShapeNodeId,
   parseShapeDragPayload,
 } from "@/lib/canvas-shape-drag"
+import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
+import { useCanvasDeleteShortcut } from "@/hooks/useKeyboardShortcuts"
 import {
   DEFAULT_NODE_LABEL,
   EDGE_DEFAULT_STROKE,
@@ -41,14 +44,24 @@ import {
   type CanvasNode,
 } from "@/types/canvas"
 
-import "@liveblocks/react-flow/styles.css"
 import "@liveblocks/react-ui/styles.css"
 import "@xyflow/react/dist/style.css"
+
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  startTransition,
+  type DragEvent,
+  type MouseEvent,
+} from "react"
 
 const nodeTypes = { canvasNode: MemoCanvasFlowNode }
 const edgeTypes = { canvasEdge: MemoCanvasFlowEdge }
 
-function CollaborativeFlowCanvasInner() {
+function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -56,8 +69,174 @@ function CollaborativeFlowCanvasInner() {
       edges: { initial: [] },
     })
 
-  const { screenToFlowPosition, fitView } = useReactFlow<CanvasNode, CanvasEdge>()
+  const reactFlow = useReactFlow<CanvasNode, CanvasEdge>()
+  const { screenToFlowPosition, fitView } = reactFlow
+  const reactFlowStore = useStoreApi()
+  const updateMyPresence = useUpdateMyPresence()
   const { setImportHandler } = useCanvasTemplateImport()
+  const { setCanvasSaveStatus } = useEditorWorkspace()
+
+  const [persistReady, setPersistReady] = useState(false)
+  const nodesRef = useRef(nodes)
+  const edgesRef = useRef(edges)
+  const hydrationDoneRef = useRef(false)
+
+  useLayoutEffect(() => {
+    nodesRef.current = nodes
+    edgesRef.current = edges
+  }, [nodes, edges])
+
+  useEffect(() => {
+    if (hydrationDoneRef.current) {
+      startTransition(() => {
+        setPersistReady(true)
+      })
+      return
+    }
+
+    if (nodes.length > 0 || edges.length > 0) {
+      hydrationDoneRef.current = true
+      startTransition(() => {
+        setPersistReady(true)
+      })
+      return
+    }
+
+    let cancelled = false
+
+    ;(async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/canvas`)
+        if (cancelled) {
+          return
+        }
+        if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
+          hydrationDoneRef.current = true
+          startTransition(() => {
+            setPersistReady(true)
+          })
+          return
+        }
+        if (!res.ok) {
+          hydrationDoneRef.current = true
+          startTransition(() => {
+            setPersistReady(true)
+          })
+          return
+        }
+        const data = (await res.json()) as {
+          nodes?: CanvasNode[]
+          edges?: CanvasEdge[]
+        }
+        if (cancelled) {
+          return
+        }
+        if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
+          hydrationDoneRef.current = true
+          startTransition(() => {
+            setPersistReady(true)
+          })
+          return
+        }
+        const n = data.nodes ?? []
+        const e = data.edges ?? []
+        if (n.length === 0 && e.length === 0) {
+          hydrationDoneRef.current = true
+          startTransition(() => {
+            setPersistReady(true)
+          })
+          return
+        }
+        if (n.length > 0) {
+          onNodesChange(
+            n.map((item) => ({
+              type: "add" as const,
+              item: structuredClone(item),
+            }))
+          )
+        }
+        if (e.length > 0) {
+          onEdgesChange(
+            e.map((item) => ({
+              type: "add" as const,
+              item: structuredClone(item),
+            }))
+          )
+        }
+        hydrationDoneRef.current = true
+        window.setTimeout(() => {
+          void fitView({ padding: 0.2, duration: 320 })
+        }, 0)
+      } finally {
+        if (!cancelled) {
+          startTransition(() => {
+            setPersistReady(true)
+          })
+        }
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    projectId,
+    nodes.length,
+    edges.length,
+    fitView,
+    onEdgesChange,
+    onNodesChange,
+  ])
+
+  useCanvasAutosave({
+    projectId,
+    nodes,
+    edges,
+    debounceMs: 2000,
+    enabled: persistReady,
+    onStatusChange: setCanvasSaveStatus,
+  })
+
+  const deleteSelection = useCallback(() => {
+    const selectedNodes = reactFlow.getNodes().filter((n) => n.selected)
+    const selectedEdges = reactFlow.getEdges().filter((e) => e.selected)
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+      return
+    }
+    void reactFlow.deleteElements({
+      nodes: selectedNodes.map((n) => ({ id: n.id })),
+      edges: selectedEdges.map((e) => ({ id: e.id })),
+    })
+  }, [reactFlow])
+
+  useCanvasDeleteShortcut(deleteSelection)
+
+  const onCanvasMouseMove = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      if (reactFlowStore.getState().paneDragging) return
+      updateMyPresence({
+        cursor: screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        }),
+      })
+    },
+    [reactFlowStore, screenToFlowPosition, updateMyPresence]
+  )
+
+  const onCanvasMouseLeave = useCallback(() => {
+    updateMyPresence({ cursor: null })
+  }, [updateMyPresence])
+
+  useEffect(() => {
+    const onBlur = () => {
+      updateMyPresence({ cursor: null })
+    }
+    window.addEventListener("blur", onBlur)
+    return () => {
+      window.removeEventListener("blur", onBlur)
+    }
+  }, [updateMyPresence])
 
   const importStarterTemplate = useCallback(
     (template: CanvasTemplate) => {
@@ -144,6 +323,8 @@ function CollaborativeFlowCanvasInner() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDelete={onDelete}
+        onMouseMove={onCanvasMouseMove}
+        onMouseLeave={onCanvasMouseLeave}
         onDragOver={onDragOver}
         onDrop={onDrop}
         nodeTypes={nodeTypes}
@@ -181,8 +362,9 @@ function CollaborativeFlowCanvasInner() {
           size={1}
           color="var(--color-border-default)"
         />
-        <Cursors />
+        <CanvasPeerCursors />
       </ReactFlow>
+      <CanvasPresenceBar />
       <CanvasViewportControls />
       <ShapePalette />
     </div>
@@ -190,9 +372,11 @@ function CollaborativeFlowCanvasInner() {
 }
 
 function CollaborativeFlowCanvas() {
+  const { id: projectId } = useRoom()
+
   return (
     <ReactFlowProvider>
-      <CollaborativeFlowCanvasInner />
+      <CollaborativeFlowCanvasInner key={projectId} projectId={projectId} />
     </ReactFlowProvider>
   )
 }
@@ -210,54 +394,12 @@ function CanvasLoadingFallback() {
   )
 }
 
-function LiveblocksRoomShell({ children }: { children: ReactNode }) {
-  const [connectionError, setConnectionError] = useState<string | null>(null)
-
-  useErrorListener(
-    useCallback((error) => {
-      const message =
-        error instanceof LiveblocksError
-          ? error.message
-          : "Could not connect to collaboration."
-      setConnectionError(message)
-    }, [])
-  )
-
-  if (connectionError !== null) {
-    return (
-      <div className="flex size-full flex-col items-center justify-center gap-2 bg-base px-6 text-center">
-        <p className="text-sm font-medium text-copy-primary">
-          Liveblocks connection error
-        </p>
-        <p className="max-w-sm text-xs text-copy-muted">{connectionError}</p>
-      </div>
-    )
-  }
-
-  return children
-}
-
-export function CollaborativeCanvas({ roomId }: { roomId: string }) {
+export function CollaborativeCanvas() {
   return (
-    <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-      <RoomProvider
-        id={roomId}
-        initialPresence={{ cursor: null, isThinking: false }}
-        initialStorage={() => ({
-          flow: new LiveObject({
-            nodes: new LiveMap(),
-            edges: new LiveMap(),
-          }),
-        })}
-      >
-        <div className="size-full min-h-[calc(100vh-3.5rem)]">
-          <LiveblocksRoomShell>
-            <ClientSideSuspense fallback={<CanvasLoadingFallback />}>
-              <CollaborativeFlowCanvas />
-            </ClientSideSuspense>
-          </LiveblocksRoomShell>
-        </div>
-      </RoomProvider>
-    </LiveblocksProvider>
+    <div className="size-full min-h-[calc(100vh-3.5rem)]">
+      <ClientSideSuspense fallback={<CanvasLoadingFallback />}>
+        <CollaborativeFlowCanvas />
+      </ClientSideSuspense>
+    </div>
   )
 }

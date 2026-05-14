@@ -4,11 +4,21 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 18 (Starter template) — complete
+- Feature 26 (design agent AI sidebar — Trigger realtime + feeds) — complete
 
 ## Current Goal
 
-- Next numbered feature spec after 18 (TBD)
+- Next numbered feature spec after 26 (TBD)
+
+## Infrastructure — Trigger.dev
+
+- [x] `@trigger.dev/sdk@^4.4.6` dev dependency
+- [x] Root `trigger.config.ts` — `project` from `TRIGGER_PROJECT_REF`, `runtime: "node"`, `dirs: ["trigger"]`, `maxDuration: 300`
+- [x] `trigger/example-ping.ts` — minimal placeholder task (`example-ping`)
+- [x] Scripts: `npm run trigger:dev`, `npm run trigger:deploy`
+- [x] `.gitignore` — `.trigger`
+
+**Local setup:** In `.env.local`, set `TRIGGER_PROJECT_REF` (e.g. `proj_kqixnczjzspllkwxvkeo`) and the dev **secret key** as `TRIGGER_SECRET_KEY` from the [Trigger.dev dashboard](https://cloud.trigger.dev). Run `npx trigger.dev@latest login` once if the CLI prompts for auth, then `npm run trigger:dev` alongside Next.js.
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -43,7 +53,99 @@ Integration / verification:
 
 ## Next Up
 
-- Next numbered feature spec after 18 (TBD).
+- Next numbered feature spec after 26 (TBD).
+
+## Feature 26 — Design agent frontend (`context/feature-specs/26-design-agent-frontend.md`)
+
+Completed tasks:
+
+- [x] `types/design-agent-task.ts` — client-safe payload/output types aligned with `trigger/design-agent.ts` (for completion messaging without importing the task file client-side).
+- [x] `components/editor/ai-workspace-sidebar.tsx` — Submit / starters append the user prompt to Liveblocks `ai-chat`, call `POST /api/ai/design`, mint `POST /api/ai/design/token`, subscribe with `useRealtimeRun(runId, { accessToken })`; input disabled + send spinner while a tracked run is executing or the room shows active AI generation; compact `ai-status-feed` strip above the composer only during a locally tracked run; assistant / error fallbacks post into `ai-chat`; user / AI bubble + send + starter chip styling uses the canvas green pair from `NODE_COLORS` / `ui-context` (no stray palette).
+- [x] `app/api/ai/design/route.ts` + `token/route.ts` — TaskRun persistence uses `getUnacceleratedPrisma()`; with Accelerate, set `DIRECT_DATABASE_URL` to a direct `postgresql://` URL. `lib/prisma.ts` recreates the cached client when `DATABASE_URL` changes so dev HMR does not leave a stale client without `taskRun`.
+- [x] `npm run build` passes
+
+## Feature 25 — Sidebar chat feed (`context/feature-specs/25-sidebar-chat-feed.md`)
+
+Completed tasks:
+
+- [x] `types/tasks.ts` — `AI_CHAT_FEED_ID` (`ai-chat`); Zod `aiChatFeedMessageDataSchema` / `parseAiChatFeedMessageData` (sender, role, content, timestamp)
+- [x] `liveblocks.config.ts` — `FeedMessageData` as union of status + chat payload types
+- [x] `components/editor/ai-workspace-sidebar.tsx` — ensure `ai-chat` feed; `useFeedMessages` + `useCreateFeedMessage`; render validated messages with sender + time + content; send path validates feed payloads; shared AI progress via `ai-status-feed`; starter chips kick off design jobs (Feature 26: same flow appends prompts to chat + realtime run tracking).
+- [x] `npm run build` passes
+
+## Feature 24 — AI presence state (`context/feature-specs/24-ai-presence-state.md`)
+
+Completed tasks:
+
+- [x] `types/tasks.ts` — feed id constant `AI_STATUS_FEED_ID`; Zod `aiStatusFeedMessageDataSchema` (optional `text`, legacy `message`); helpers `parseAiStatusFeedMessageData`, `isAiGenerationActive`
+- [x] `liveblocks.config.ts` — global `FeedMessageData` aligns with validated feed payloads
+- [x] `lib/design-agent/liveblocks-agent-presence.ts` — ensure feed exists; `broadcastAiDesignStatus` appends validated `createFeedMessage` (`ai-status-feed`) after broadcast
+- [x] `editor-liveblocks-collaboration-root.tsx` + `editor-workspace-viewport.tsx` — single `LiveblocksProvider` / `RoomProvider` wraps canvas column and AI sidebar for shared feed subscriptions
+- [x] `collaborative-canvas.tsx` — room shell moved out; inner flow uses `useRoom().id` as project id
+- [x] `ai-workspace-sidebar.tsx` — `useFeedMessages` / `useCreateFeed` on `ai-status-feed`; header status chip; latest validated status only; chat + starters disabled for whole room while generation active; send shows spinner; `thinking` presence cleared when terminal feed matches pending `runId`
+- [x] `canvas-peer-cursors.tsx` — spinner beside name in badge when `presence.thinking`
+- [x] `editor-workspace-provider.tsx` — removed duplicate `aiDesignFeed` workspace state
+- [x] `npm run build` passes
+
+## Feature 23 — Design agent logic (`context/feature-specs/23-design-agent-logic.md`)
+
+Completed tasks:
+
+- [x] `trigger/design-agent.ts` — planning via Gemini tool-loop (`generateText` + canvas tools in `gemini-plan.ts`); `Liveblocks.getStorageDocument` + `snapshotFromLiveblocksJson`; `mutateFlow` applies sorted actions; `broadcastEvent` + ephemeral `setPresence`; clears presence on completion/error
+- [x] `lib/design-agent/*` — per-action Zod tool schemas + `applyDesignAgentAction`, `finishDesignPlan` tool for summary; presence/broadcast helpers; storage snapshot parser
+- [x] `lib/liveblocks-node-client.ts` — shared `createLiveblocksClient()` for Next + Trigger (`lib/liveblocks-server.ts` uses it)
+- [x] `liveblocks.config.ts` — `RoomEvent` typed as `AiDesignStatusEventPayload` (+ `FeedMessageData` in Feature 24)
+- [x] `components/editor/collaborative-canvas.tsx` — canvas + flow hydration/autosave; room providers moved to Feature 24 `editor-liveblocks-collaboration-root.tsx`
+- [x] `components/editor/editor-workspace-provider.tsx` — `aiArchitectMessages`; workspace reset on bind/clear (removed client-only design feed duplicate in Feature 24)
+- [x] `components/editor/ai-workspace-sidebar.tsx` — `/api/ai/design` trigger path; sidebar subscribes to Liveblocks feed in Feature 24
+- [x] `components/editor/canvas-peer-cursors.tsx` — live cursors + `presence.thinking` UX (badge spinner in Feature 24)- [x] `npm run build` passes
+
+**Trigger.dev cloud:** set `GEMINI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` (same values as local) on the Trigger environment so deployed tasks can call Gemini and Liveblocks.
+
+## Feature 22 — Design agent API (`context/feature-specs/22-design-agent-api.md`)
+
+Completed tasks:
+
+- [x] `POST /api/ai/design` — JSON `{ prompt, roomId, projectId }`; Clerk identity + `getProjectAccessibleToEditor`; `tasks.trigger` for `design-agent`; Prisma `TaskRun`; returns `{ runId }`; `503` without `TRIGGER_SECRET_KEY`
+- [x] Prisma `TaskRun` — `runId` (PK), `projectId` → `Project`, `userId`, `createdAt`; `@@index([userId, projectId])`; migration `20260514183212_add_task_run`
+- [x] `POST /api/ai/design/token` — JSON `{ runId }`; ownership via `TaskRun` + current user; `auth.createPublicToken` scoped to run + task id; returns `{ token }`
+- [x] `trigger/design-agent.ts` — task id `design-agent`; payload `{ prompt, roomId }`; logs via `logger.info`; no AI/canvas
+- [x] `lib/trigger-task-ids.ts` — shared task id constant for routes + trigger file (relative import from trigger)
+- [x] `proxy.ts` — `/api/ai(.*)` on public API matcher (handlers return JSON `401` like projects)
+- [x] `npm run build` passes
+
+## Feature 21 — Canvas autosave (`context/feature-specs/21-canvas-autosave.md`)
+
+Completed tasks:
+
+- [x] Prisma `Project.canvasJsonPath` — reused for Vercel Blob URL metadata (no schema migration)
+- [x] `npm install @vercel/blob`
+- [x] `PUT /api/projects/[projectId]/canvas` — JSON `{ nodes, edges }` → `put()` at `canvas/{projectId}.json`, update `canvasJsonPath`; owner/collaborator via `getProjectAccessibleToEditor`; requires `BLOB_READ_WRITE_TOKEN`
+- [x] `GET /api/projects/[projectId]/canvas` — same access; empty blob field returns `{ nodes: [], edges: [] }`; fetches stored JSON from blob URL
+- [x] `hooks/use-canvas-autosave.ts` — debounced (2s) save, status callbacks (`idle` \| `saving` \| `saved` \| `error`)
+- [x] `components/editor/collaborative-canvas.tsx` — hydration once per project session (`hydrationDoneRef`); loads from GET only when Liveblocks room starts empty and snapshot exists; skips if room already has nodes/edges; `persistReady` gates autosave until hydration finishes
+- [x] `components/editor/editor-workspace-provider.tsx` — `canvasSaveStatus` / `setCanvasSaveStatus`, reset with `clearWorkspaceChrome`
+- [x] `components/editor/editor-navbar.tsx` — Save control showing Saving… / Saved / Save failed / idle (muted “Saved”)
+- [x] `npm run build` passes
+
+## Feature 20 — AI sidebar shell (`context/feature-specs/20-ai-sidebar-shell.md`)
+
+Completed tasks:
+
+- [x] `components/editor/ai-workspace-sidebar.tsx` — dedicated sidebar UI: header (`AI Workspace` / subtitle, bot icon, close); shadcn `Tabs` (`AI Architect` / `Specs`); Architect tab with `ScrollArea`, empty state, starter chips (`bg-subtle` / `text-accent-text`), local-only chat bubbles (user / assistant styles), auto-height `Textarea` (72–160px), Enter vs Shift+Enter, `bg-accent text-white` send; Specs tab with `Generate Spec` + static demo card (`bg-elevated`) and disabled download
+- [x] `components/editor/editor-workspace-viewport.tsx` — composes sidebar; preserves width/opacity slide-in; parent-controlled `aiSidebarOpen` / `setAiSidebarOpen`; outer surface `bg-base/95`, `border-surface-border`, `shadow-lg`, `backdrop-blur-sm`
+- [x] `app/globals.css` — `@theme` aliases `primary-text`, `muted-text`, `accent-text`, `brand-dim` for spec token class names
+- [x] `npm run build` passes
+
+## Feature 19 — Presence avatars + cursors (`context/feature-specs/19-presence-avatars-cursor.md`)
+
+Completed tasks:
+
+- [x] `liveblocks.config.ts` — `Presence`: `cursor`, `thinking` (rename from `isThinking`); `RoomProvider` `initialPresence` aligned
+- [x] `components/editor/canvas-presence-bar.tsx` — top-right overlay on canvas only: overlapping collaborator stack (photo or initials, ring), +N overflow, divider only when collaborators exist, Clerk `UserButton` at `size-8`; excludes current user via Clerk `useUser` + Liveblocks `useOthers`
+- [x] `components/editor/canvas-peer-cursors.tsx` — other users’ cursors in flow space with pointer + name badge; colors from `other.info.color`; `useOthersMapped` + `useStore` transform
+- [x] `components/editor/collaborative-canvas.tsx` — `useUpdateMyPresence` + React Flow `onMouseMove` / `onMouseLeave`; optional `blur` clears cursor; removed default `Cursors` from `@liveblocks/react-flow` (custom layer + mouse handlers per spec); navbar unchanged
+- [x] `npm run build` passes
 
 ## Feature 18 — Starter template (`context/feature-specs/18-starter-template.md`)
 
@@ -125,7 +227,7 @@ Completed tasks:
 - [x] `types/canvas.ts` — `NODE_COLORS`, `NODE_SHAPES`, `CanvasNodeData` (`label`, `color`, `shape`), types `CanvasNode` (`canvasNode`) / `CanvasEdge` (`canvasEdge`), `EDGE_DEFAULT_STROKE`
 - [x] `liveblocks.config.ts` — `Storage.flow` typed as `LiveblocksFlow<CanvasNode, CanvasEdge>`
 - [x] `components/editor/collaborative-canvas.tsx` — `LiveblocksProvider` (`/api/liveblocks-auth`), `RoomProvider` (project id, `initialPresence` with `cursor: null`, `initialStorage` empty `flow`), `ClientSideSuspense` loading state, `useErrorListener` connection error UI
-- [x] React Flow — `useLiveblocksFlow` with `suspense: true`, empty `nodes` / `edges`, dot `Background`, `fitView`, `connectionMode={Loose}`, `canvasEdge` type (now custom `MemoCanvasFlowEdge`; was `SmoothStepEdge` in initial deliverable), `Cursors` (initial build also had `MiniMap`; removed in Feature 17)
+- [x] React Flow — `useLiveblocksFlow` with `suspense: true`, empty `nodes` / `edges`, dot `Background`, `fitView`, `connectionMode={Loose}`, `canvasEdge` type (now custom `MemoCanvasFlowEdge`; was `SmoothStepEdge` in initial deliverable); live cursors via Feature 19 custom layer (initial build used `@liveblocks/react-flow` `Cursors`; MiniMap removed in Feature 17)
 - [x] `app/editor/[projectId]/page.tsx` stays async server page; passes `roomId` into viewport
 - [x] `components/editor/editor-workspace-viewport.tsx` — collaborative canvas in main column (AI rail unchanged)
 - [x] `npm run build` passes
@@ -134,9 +236,9 @@ Completed tasks:
 
 Completed tasks:
 
-- [x] Root `liveblocks.config.ts` — `Presence` (`cursor`, `isThinking`), `UserMeta.info` (`name`, `avatar`, `color` for cursor), typed `Storage` / events / metadata stubs
+- [x] Root `liveblocks.config.ts` — `Presence` (`cursor`, `thinking` since Feature 19; was `isThinking` in initial deliverable), `UserMeta.info` (`name`, `avatar`, `color` for cursor), typed `Storage` / events / metadata stubs
 - [x] `lib/liveblocks-server.ts` — cached `Liveblocks` node client (`getLiveblocks`) + `cursorColorForUserId` palette helper
-- [x] `POST /api/liveblocks-auth` — Clerk session via `getEditorClerkIdentity`, `getProjectAccessibleToEditor` (403), `upsertRoom` private room + `usersAccesses` for Clerk `userId`, `identifyUser` with name / avatar / color
+- [x] `POST /api/liveblocks-auth` — Clerk session via `getEditorClerkIdentity`, `getProjectAccessibleToEditor` (403), `upsertRoom` private room + `usersAccesses` for Clerk `userId`, `prepareSession` + `session.allow(room, ["room:write", "feeds:write"])` then `authorize` (Feeds require `feeds:write`; not covered by dashboard-only `identifyUser` defaults), ensures `ai-chat` + `ai-status-feed` via `ensureDefaultEditorFeeds`, userInfo name / avatar / color
 - [x] `proxy.ts` — `/api/liveblocks-auth` on public API matcher (handler returns JSON `401`, same pattern as project APIs)
 - [x] `@liveblocks/node` dependency aligned with client packages
 - [x] `npm run build` passes
