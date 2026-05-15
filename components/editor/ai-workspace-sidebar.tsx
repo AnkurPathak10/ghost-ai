@@ -10,20 +10,15 @@ import {
   useUpdateMyPresence,
 } from "@liveblocks/react"
 import { useRealtimeRun } from "@trigger.dev/react-hooks"
-import {
-  Bot,
-  Download,
-  FileText,
-  Loader2,
-  SendHorizontal,
-  X,
-} from "lucide-react"
+import { Bot, Loader2, SendHorizontal, X } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
+import { AiWorkspaceSpecsPanel } from "@/components/editor/ai-workspace-specs-panel"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import type { SpecGenerationApiBody } from "@/lib/spec-generation/spec-generation-schemas"
 import { cn } from "@/lib/utils"
 import {
   AI_CHAT_FEED_ID,
@@ -230,6 +225,17 @@ function AiWorkspaceSidebarRoomReady({
     }
     return out.sort((a, b) => a.createdAt - b.createdAt)
   }, [chatFeedState])
+
+  const specChatHistory = useMemo(
+    (): SpecGenerationApiBody["chatHistory"] =>
+      validatedChatEntries.map((e) => ({
+        sender: e.data.sender,
+        role: e.data.role,
+        content: e.data.content,
+        timestamp: e.data.timestamp,
+      })),
+    [validatedChatEntries]
+  )
 
   const realtimeEnabled =
     typeof designRunId === "string" &&
@@ -877,44 +883,10 @@ function AiWorkspaceSidebarRoomReady({
           value="specs"
           className="mt-0 flex min-h-0 flex-1 flex-col p-5"
         >
-          <div className="flex flex-col gap-4">
-            <Button
-              type="button"
-              className="w-full gap-2 bg-accent text-white hover:bg-accent/90 sm:w-auto"
-            >
-              Generate Spec
-            </Button>
-
-            <div className="rounded-2xl border border-surface-border bg-elevated p-4">
-              <div className="flex gap-3">
-                <div
-                  className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-subtle text-accent-text"
-                  aria-hidden
-                >
-                  <FileText className="size-5" strokeWidth={1.75} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-primary-text">
-                    Service mesh ingress
-                  </h3>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-text">
-                    Defines north-south traffic, TLS termination at the edge, and
-                    routing rules for internal services…
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-4 w-full border-surface-border text-copy-muted sm:w-auto"
-                disabled
-              >
-                <Download className="size-4" aria-hidden />
-                Download
-              </Button>
-            </div>
-          </div>
+          <AiWorkspaceSpecsPanel
+            projectId={projectId}
+            chatHistory={specChatHistory}
+          />
         </TabsContent>
       </Tabs>
     </div>

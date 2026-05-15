@@ -56,7 +56,7 @@ Ghost AI is a real-time collaborative system design workspace. Users describe a 
 ### Spec Generation
 
 - The current canvas graph is converted into a Markdown technical specification.
-- Specs are persisted as files and linked to the project in the database.
+- Spec Markdown is stored in private Vercel Blob storage; the database holds metadata (`ProjectSpec`) linking each artifact to a project.
 - Users can view and download generated specs.
 
 ## Scope
