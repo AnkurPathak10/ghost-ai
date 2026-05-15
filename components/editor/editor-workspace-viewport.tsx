@@ -18,11 +18,13 @@ export function EditorWorkspaceViewport({ roomId }: { roomId: string }) {
           <aside
             aria-hidden={!aiSidebarOpen}
             className={cn(
-              "fixed top-14 right-0 z-30 flex h-[calc(100vh-3.5rem)] w-[min(100%,24rem)] flex-col border-l border-surface-border bg-base/95 shadow-lg backdrop-blur-sm sm:w-96",
-              "transition-[transform,visibility] duration-200 ease-out",
+              "fixed z-30 flex min-h-0 w-[min(24rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border border-surface-border bg-base/95 shadow-xl backdrop-blur-sm sm:w-96",
+              /* Float above the canvas: inset from navbar (h-14 + 1rem), screen right, and bottom */
+              "top-18 bottom-4 right-4",
+              "transition-[transform,visibility,opacity] duration-200 ease-out",
               aiSidebarOpen
-                ? "visible translate-x-0"
-                : "pointer-events-none invisible translate-x-full"
+                ? "visible translate-x-0 opacity-100"
+                : "pointer-events-none invisible translate-x-full opacity-0"
             )}
           >
             <AiWorkspaceSidebar

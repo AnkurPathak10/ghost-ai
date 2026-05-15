@@ -1,6 +1,6 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { generateText, stepCountIs, tool } from "ai"
 
+import { getOpenRouterChatModel } from "@/lib/ai/openrouter"
 import type { CanvasEdge, CanvasNode } from "@/types/canvas"
 
 import {
@@ -54,22 +54,8 @@ const SYSTEM = `You are Ghost AI's system architect. You MUST use the provided t
 Call tools in a sensible order (deletes before adds that replace content; add nodes before edges that reference them).
 Use only palette ids for colors, never raw hex. After all tools for this request, call finishDesignPlan exactly once.`
 
-/** `@ai-sdk/google` defaults to `GOOGLE_GENERATIVE_AI_API_KEY`; accept common env names. */
-function resolveGoogleGenerativeAiApiKey(): string {
-  const key =
-    process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
-    process.env.GOOGLE_API_KEY?.trim()
-  if (!key) {
-    throw new Error(
-      "No Google AI API key: set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY (or GOOGLE_API_KEY)."
-    )
-  }
-  return key
-}
-
 /**
- * Plans canvas edits via Gemini tool calls (reliable with Gemini vs single-shot structured JSON).
+ * Plans canvas edits via OpenRouter (OpenAI-compatible API) tool calls.
  * Pattern aligns with AI SDK multi-step tool loops; see https://ai-sdk.dev/docs/ai-sdk-core/generating-structured-data
  */
 export async function generateDesignAgentPlan(input: {
@@ -77,10 +63,6 @@ export async function generateDesignAgentPlan(input: {
   nodes: CanvasNode[]
   edges: CanvasEdge[]
 }): Promise<DesignAgentPlan> {
-  const googleGenAi = createGoogleGenerativeAI({
-    apiKey: resolveGoogleGenerativeAiApiKey(),
-  })
-
   const actions: DesignAgentAction[] = []
   const finishState = { summary: "" }
 
@@ -90,7 +72,7 @@ export async function generateDesignAgentPlan(input: {
   }
 
   const result = await generateText({
-    model: googleGenAi("gemini-2.5-flash"),
+    model: getOpenRouterChatModel(),
     system: SYSTEM,
     prompt: buildUserPrompt(input),
     tools: {
