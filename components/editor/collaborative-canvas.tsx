@@ -1,8 +1,11 @@
 "use client"
 
+import { LiveMap, LiveObject } from "@liveblocks/client"
 import {
   ClientSideSuspense,
+  useMutation,
   useRoom,
+  useStorage,
   useUpdateMyPresence,
 } from "@liveblocks/react/suspense"
 import { useLiveblocksFlow } from "@liveblocks/react-flow"
@@ -15,6 +18,7 @@ import {
   ReactFlow,
   useReactFlow,
   useStoreApi,
+  type OnNodesChange,
 } from "@xyflow/react"
 import { Loader2 } from "lucide-react"
 
@@ -23,16 +27,17 @@ import { CanvasPresenceBar } from "@/components/editor/canvas-presence-bar"
 
 import { MemoCanvasFlowEdge } from "@/components/editor/canvas-flow-edge"
 import { MemoCanvasFlowNode } from "@/components/editor/canvas-flow-node"
+import { CanvasAiToggle } from "@/components/editor/canvas-ai-toggle"
 import { CanvasViewportControls } from "@/components/editor/canvas-viewport-controls"
 import { ShapePalette } from "@/components/editor/shape-palette"
 import { useCanvasTemplateImport } from "@/components/editor/canvas-template-import-context"
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import type { CanvasTemplate } from "@/components/editor/starter-templates"
+import { liveblocksCanvasEdgeSync, liveblocksCanvasNodeSync } from "@/lib/canvas-liveblocks-flow-sync"
 import {
-  CANVAS_SHAPE_DRAG_MIME,
   DEFAULT_NEW_NODE_COLOR,
   nextCanvasShapeNodeId,
-  parseShapeDragPayload,
+  type CanvasShapeDragPayload,
 } from "@/lib/canvas-shape-drag"
 import { useCanvasAutosave } from "@/hooks/use-canvas-autosave"
 import { useCanvasDeleteShortcut } from "@/hooks/useKeyboardShortcuts"
@@ -53,20 +58,132 @@ import {
   useRef,
   useState,
   startTransition,
-  type DragEvent,
   type MouseEvent,
 } from "react"
 
+/** Must match `RoomProvider` initialStorage and @liveblocks/react-flow default. */
+const LIVEBLOCKS_FLOW_STORAGE_KEY = "flow"
+
 const nodeTypes = { canvasNode: MemoCanvasFlowNode }
 const edgeTypes = { canvasEdge: MemoCanvasFlowEdge }
+
+/** Must render under `<ReactFlow>` so `screenToFlowPosition` and `domNode` are valid. */
+function CanvasShapePaletteBridge({
+  onNodesChange,
+  seedFlowStorage,
+}: {
+  onNodesChange: OnNodesChange<CanvasNode>
+  /** Ensures Liveblocks `flow` exists before `onNodesChange` runs (otherwise adds are dropped). */
+  seedFlowStorage: () => void
+}) {
+  const { screenToFlowPosition } = useReactFlow<CanvasNode, CanvasEdge>()
+  const storeApi = useStoreApi()
+  const flowRoot = useStorage((storage) => storage.flow)
+  const flowReadyRef = useRef(flowRoot !== undefined)
+
+  useEffect(() => {
+    flowReadyRef.current = flowRoot !== undefined
+  }, [flowRoot])
+
+  const onPlaceShape = useCallback(
+    (payload: CanvasShapeDragPayload, clientX: number, clientY: number) => {
+      seedFlowStorage()
+
+      const insetPx = 2
+      const maxAttempts = 90
+
+      const tryPlace = (attemptsLeft: number) => {
+        if (!flowReadyRef.current) {
+          if (attemptsLeft > 0) {
+            requestAnimationFrame(() => tryPlace(attemptsLeft - 1))
+          }
+          return
+        }
+
+        const domNode = storeApi.getState().domNode
+        if (!domNode) {
+          if (attemptsLeft > 0) {
+            requestAnimationFrame(() => tryPlace(attemptsLeft - 1))
+          }
+          return
+        }
+
+        const pane =
+          domNode.querySelector<HTMLElement>(".react-flow__pane") ?? domNode
+        const r = pane.getBoundingClientRect()
+        if (
+          clientX < r.left - insetPx ||
+          clientX > r.right + insetPx ||
+          clientY < r.top - insetPx ||
+          clientY > r.bottom + insetPx
+        ) {
+          return
+        }
+
+        const { width, height } = payload
+        const p = screenToFlowPosition({ x: clientX, y: clientY })
+        const newNode: CanvasNode = {
+          id: nextCanvasShapeNodeId(payload.shape),
+          type: "canvasNode",
+          position: {
+            x: p.x - width / 2,
+            y: p.y - height / 2,
+          },
+          width,
+          height,
+          data: {
+            label: "",
+            color: DEFAULT_NEW_NODE_COLOR,
+            labelColor: DEFAULT_NODE_LABEL,
+            shape: payload.shape,
+          },
+        }
+        onNodesChange([{ type: "add", item: newNode }])
+      }
+
+      queueMicrotask(() => {
+        requestAnimationFrame(() => tryPlace(maxAttempts))
+      })
+    },
+    [onNodesChange, screenToFlowPosition, seedFlowStorage, storeApi]
+  )
+
+  return <ShapePalette onPlaceShape={onPlaceShape} />
+}
 
 function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
-      nodes: { initial: [] },
-      edges: { initial: [] },
+      nodes: { initial: [], sync: liveblocksCanvasNodeSync },
+      edges: { initial: [], sync: liveblocksCanvasEdgeSync },
     })
+
+  /**
+   * `useLiveblocksFlow` applies node/edge changes only when `storage.get("flow")`
+   * exists (@liveblocks/react-flow `onNodesChange` returns early otherwise).
+   * Its own `setInitialStorage` runs in `useEffect`, so there is a frame where
+   * `flow` can be missing (e.g. legacy rooms). Seed synchronously before paint.
+   */
+  const initFlowStorageIfMissing = useMutation(
+    ({ storage }) => {
+      if (storage.get(LIVEBLOCKS_FLOW_STORAGE_KEY) !== undefined) {
+        return
+      }
+      storage.set(
+        LIVEBLOCKS_FLOW_STORAGE_KEY,
+        new LiveObject({
+          nodes: new LiveMap(),
+          edges: new LiveMap(),
+        })
+      )
+    },
+    []
+  )
+
+  useLayoutEffect(() => {
+    initFlowStorageIfMissing()
+  }, [initFlowStorageIfMissing])
 
   const reactFlow = useReactFlow<CanvasNode, CanvasEdge>()
   const { screenToFlowPosition, fitView } = reactFlow
@@ -87,26 +204,30 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
 
   useEffect(() => {
     if (hydrationDoneRef.current) {
-      startTransition(() => {
-        setPersistReady(true)
-      })
       return
     }
-
     if (nodes.length > 0 || edges.length > 0) {
       hydrationDoneRef.current = true
       startTransition(() => {
         setPersistReady(true)
       })
+    }
+  }, [nodes.length, edges.length])
+
+  useEffect(() => {
+    if (hydrationDoneRef.current) {
       return
     }
 
     let cancelled = false
+    const storageGraceMs = 320
 
-    ;(async () => {
-      try {
-        const res = await fetch(`/api/projects/${projectId}/canvas`)
+    const timer = window.setTimeout(() => {
+      ;(async () => {
         if (cancelled) {
+          return
+        }
+        if (hydrationDoneRef.current) {
           return
         }
         if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
@@ -116,76 +237,87 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
           })
           return
         }
-        if (!res.ok) {
+        try {
+          const res = await fetch(`/api/projects/${projectId}/canvas`)
+          if (cancelled) {
+            return
+          }
+          if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
+            hydrationDoneRef.current = true
+            startTransition(() => {
+              setPersistReady(true)
+            })
+            return
+          }
+          if (!res.ok) {
+            hydrationDoneRef.current = true
+            startTransition(() => {
+              setPersistReady(true)
+            })
+            return
+          }
+          const data = (await res.json()) as {
+            nodes?: CanvasNode[]
+            edges?: CanvasEdge[]
+          }
+          if (cancelled) {
+            return
+          }
+          if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
+            hydrationDoneRef.current = true
+            startTransition(() => {
+              setPersistReady(true)
+            })
+            return
+          }
+          const n = data.nodes ?? []
+          const e = data.edges ?? []
+          if (n.length === 0 && e.length === 0) {
+            hydrationDoneRef.current = true
+            startTransition(() => {
+              setPersistReady(true)
+            })
+            return
+          }
+          if (n.length > 0) {
+            onNodesChange(
+              n.map((item) => ({
+                type: "add" as const,
+                item: structuredClone(item),
+              }))
+            )
+          }
+          if (e.length > 0) {
+            onEdgesChange(
+              e.map((item) => ({
+                type: "add" as const,
+                item: structuredClone(item),
+              }))
+            )
+          }
           hydrationDoneRef.current = true
-          startTransition(() => {
-            setPersistReady(true)
-          })
-          return
-        }
-        const data = (await res.json()) as {
-          nodes?: CanvasNode[]
-          edges?: CanvasEdge[]
-        }
-        if (cancelled) {
-          return
-        }
-        if (nodesRef.current.length > 0 || edgesRef.current.length > 0) {
-          hydrationDoneRef.current = true
-          startTransition(() => {
-            setPersistReady(true)
-          })
-          return
-        }
-        const n = data.nodes ?? []
-        const e = data.edges ?? []
-        if (n.length === 0 && e.length === 0) {
-          hydrationDoneRef.current = true
-          startTransition(() => {
-            setPersistReady(true)
-          })
-          return
-        }
-        if (n.length > 0) {
-          onNodesChange(
-            n.map((item) => ({
-              type: "add" as const,
-              item: structuredClone(item),
-            }))
-          )
-        }
-        if (e.length > 0) {
-          onEdgesChange(
-            e.map((item) => ({
-              type: "add" as const,
-              item: structuredClone(item),
-            }))
-          )
-        }
-        hydrationDoneRef.current = true
-        window.setTimeout(() => {
-          void fitView({ padding: 0.2, duration: 320 })
-        }, 0)
-      } finally {
-        if (!cancelled) {
+          window.setTimeout(() => {
+            void fitView({ padding: 0.2, duration: 320 })
+          }, 0)
+        } finally {
+          if (cancelled) {
+            return
+          }
+          if (!hydrationDoneRef.current) {
+            hydrationDoneRef.current = true
+          }
           startTransition(() => {
             setPersistReady(true)
           })
         }
-      }
-    })()
+      })()
+    }, storageGraceMs)
 
     return () => {
       cancelled = true
+      window.clearTimeout(timer)
     }
-  }, [
-    projectId,
-    nodes.length,
-    edges.length,
-    fitView,
-    onEdgesChange,
-    onNodesChange,
-  ])
+  }, [projectId, fitView, onEdgesChange, onNodesChange])
 
   useCanvasAutosave({
     projectId,
@@ -273,44 +405,6 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
     return () => setImportHandler(null)
   }, [importStarterTemplate, setImportHandler])
 
-  const onDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.dataTransfer.dropEffect = "copy"
-  }, [])
-
-  const onDrop = useCallback(
-    (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault()
-      const raw = e.dataTransfer.getData(CANVAS_SHAPE_DRAG_MIME)
-      const payload = parseShapeDragPayload(raw)
-      if (!payload) return
-
-      const { width, height } = payload
-      const p = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      const position = {
-        x: p.x - width / 2,
-        y: p.y - height / 2,
-      }
-
-      const newNode: CanvasNode = {
-        id: nextCanvasShapeNodeId(payload.shape),
-        type: "canvasNode",
-        position,
-        width,
-        height,
-        data: {
-          label: "",
-          color: DEFAULT_NEW_NODE_COLOR,
-          labelColor: DEFAULT_NODE_LABEL,
-          shape: payload.shape,
-        },
-      }
-
-      onNodesChange([{ type: "add", item: newNode }])
-    },
-    [onNodesChange, screenToFlowPosition]
-  )
-
   return (
     <div className="relative size-full">
       <ReactFlow
@@ -324,8 +418,6 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
         onDelete={onDelete}
         onMouseMove={onCanvasMouseMove}
         onMouseLeave={onCanvasMouseLeave}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         connectionMode={ConnectionMode.Loose}
@@ -362,10 +454,14 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
           color="var(--color-border-default)"
         />
         <CanvasPeerCursors />
+        <CanvasShapePaletteBridge
+          onNodesChange={onNodesChange}
+          seedFlowStorage={initFlowStorageIfMissing}
+        />
       </ReactFlow>
       <CanvasPresenceBar />
+      <CanvasAiToggle />
       <CanvasViewportControls />
-      <ShapePalette />
     </div>
   )
 }
@@ -391,7 +487,7 @@ function CanvasLoadingFallback() {
 
 export function CollaborativeCanvas() {
   return (
-    <div className="size-full min-h-[calc(100vh-3.5rem)]">
+    <div className="size-full min-h-0">
       <ClientSideSuspense fallback={<CanvasLoadingFallback />}>
         <CollaborativeFlowCanvas />
       </ClientSideSuspense>

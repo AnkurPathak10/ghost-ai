@@ -21,6 +21,8 @@ import { NodeColorSwatches } from "@/components/editor/node-color-swatches"
 import { CanvasNodeSurface } from "@/components/editor/canvas-node-surface"
 import { cn } from "@/lib/utils"
 import {
+  DEFAULT_NODE_FILL,
+  DEFAULT_NODE_LABEL,
   resolveNodeColorPair,
   type CanvasEdge,
   type CanvasNode,
@@ -46,15 +48,21 @@ const HANDLE_DOT_CLASS = cn(
 
 function CanvasFlowNode(props: NodeProps<CanvasNode>) {
   const { updateNodeData } = useReactFlow<CanvasNode, CanvasEdge>()
-  const shape: NodeShape = props.data.shape ?? "rectangle"
+  const data = props.data ?? {
+    label: "",
+    color: DEFAULT_NODE_FILL,
+    labelColor: DEFAULT_NODE_LABEL,
+    shape: "rectangle" as const,
+  }
+  const shape: NodeShape = data.shape ?? "rectangle"
   const width = props.width ?? 128
   const height = props.height ?? 64
   const selected = Boolean(props.selected)
 
-  const { fill: nodeFill, label: textColor } = resolveNodeColorPair(props.data)
+  const { fill: nodeFill, label: textColor } = resolveNodeColorPair(data)
 
   const [editing, setEditing] = useState(false)
-  const [draftLabel, setDraftLabel] = useState(props.data.label ?? "")
+  const [draftLabel, setDraftLabel] = useState(data.label ?? "")
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   useEffect(() => {
     if (!editing) return
@@ -73,10 +81,10 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
     (e: ReactMouseEvent) => {
       e.stopPropagation()
       e.preventDefault()
-      setDraftLabel(props.data.label ?? "")
+      setDraftLabel(data.label ?? "")
       setEditing(true)
     },
-    [props.data.label]
+    [data.label]
   )
 
   const patchLabel = useCallback(
@@ -144,12 +152,12 @@ function CanvasFlowNode(props: NodeProps<CanvasNode>) {
             className="relative z-[1] flex h-full w-full cursor-text items-center justify-center px-3"
             onDoubleClick={openEdit}
           >
-            {props.data.label ? (
+            {data.label ? (
               <span
                 className="line-clamp-4 w-full whitespace-pre-wrap wrap-break-word"
                 style={{ color: textColor }}
               >
-                {props.data.label}
+                {data.label}
               </span>
             ) : (
               <span

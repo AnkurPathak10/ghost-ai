@@ -18,9 +18,9 @@ Update this file whenever the current phase, active feature, or implementation s
 - [x] Scripts: `npm run trigger:dev`, `npm run trigger:deploy`
 - [x] `.gitignore` — `.trigger`
 
-**Local setup:** In `.env.local`, set `TRIGGER_PROJECT_REF` (e.g. `proj_kqixnczjzspllkwxvkeo`) and the dev **secret key** as `TRIGGER_SECRET_KEY` from the [Trigger.dev dashboard](https://cloud.trigger.dev). Run `npx trigger.dev@latest login` once if the CLI prompts for auth, then `npm run trigger:dev` alongside Next.js.
+**Local setup:** In `.env.local`, set `TRIGGER_PROJECT_REF` (e.g. `proj_kqixnczjzspllkwxvkeo`) and the dev **secret key** as `TRIGGER_SECRET_KEY` from the [Trigger.dev dashboard](https://cloud.trigger.dev). Set `OPENROUTER_API_KEY` for design-agent + spec generation (see `lib/ai/openrouter.ts`). Run `npx trigger.dev@latest login` once if the CLI prompts for auth, then `npm run trigger:dev` alongside Next.js.
 
-**Trigger.dev:** For `generate-spec`, set `BLOB_READ_WRITE_TOKEN` (and `DIRECT_DATABASE_URL` when Next.js uses Accelerate, same as `TaskRun`) on the Trigger environment so completed runs persist `ProjectSpec` + private blob uploads.
+**Trigger.dev:** For `generate-spec`, set `OPENROUTER_API_KEY` (and optional `OPENROUTER_MODEL`, `OPENROUTER_HTTP_REFERER`, `OPENROUTER_APP_NAME`), plus `BLOB_READ_WRITE_TOKEN` (and `DIRECT_DATABASE_URL` when Next.js uses Accelerate, same as `TaskRun`) on the Trigger environment so completed runs persist `ProjectSpec` + private blob uploads.
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -53,6 +53,13 @@ Integration / verification:
 
 - None.
 
+## Recent fixes (editor)
+
+- **Liveblocks flow sync:** `lib/canvas-liveblocks-flow-sync.ts` — `useLiveblocksFlow` + Trigger `mutateFlow` now use `sync: { "*": { data: true } }` for nodes so `data` (labels, colors, shapes) round-trips; previously default LB config could drop `data`, yielding empty/broken nodes (AI Trigger “applied” but blank canvas).
+- **Shape palette / Liveblocks race:** `CanvasShapePaletteBridge` stays inside `<ReactFlow>` for valid `screenToFlowPosition` / `domNode` (XYFlow). `@liveblocks/react-flow`'s `onNodesChange` is a no-op until `storage.get("flow")` exists while `setInitialStorage` runs in `useEffect`, so palette drops could run too early; `CollaborativeFlowCanvasInner` now runs `useLayoutEffect` + `useMutation` to seed `flow` (empty `LiveMap`s) before paint when missing. Palette drag uses `capture: true` window pointer listeners and falls back to last client coords when `pointerup` reports `(0,0)`. Palette placement retries until Liveblocks `storage.flow` exists and XYFlow `domNode` is set, hit-tests the `.react-flow__pane`, and defers work past a microtask so storage seeding can apply (fixes dev-only silent drops).
+- **Canvas node:** safe defaults when `props.data` is missing.
+- **Hydration:** REST seed defers ~320ms so Liveblocks storage can arrive before treating the canvas as empty.
+
 ## Next Up
 
 - Next numbered feature spec after 29 (TBD).
@@ -83,7 +90,7 @@ Completed tasks:
 
 - [x] `POST /api/ai/spec` — Zod body (`roomId`, `chatHistory`, `nodes`, `edges`); Clerk + `getProjectAccessibleToEditor(roomId)` (no client `projectId`); `tasks.trigger` for `generate-spec` with server-resolved `projectId`; Prisma `TaskRun`; returns `{ runId }`; `503` without `TRIGGER_SECRET_KEY`
 - [x] `POST /api/ai/spec/token` — JSON `{ runId }`; `TaskRun` ownership; `auth.createPublicToken` scoped to run + `generate-spec`; `expirationTime: "1h"`; returns `{ token }`
-- [x] `trigger/generate-spec.ts` — Zod payload, Gemini via `@ai-sdk/google` + `generateText`, Markdown output (`ok` + `markdown` or `error`; Feature 28 adds Blob persistence, `specId`, and download API); `metadata` for phase/status; `lib/spec-generation/spec-generation-schemas.ts` + `GENERATE_SPEC_TASK_ID` in `lib/trigger-task-ids.ts`
+- [x] `trigger/generate-spec.ts` — Zod payload, OpenRouter via `@ai-sdk/openai` + `generateText` (`lib/ai/openrouter.ts`, default `openai/gpt-oss-120b:free`), Markdown output (`ok` + `markdown` or `error`; Feature 28 adds Blob persistence, `specId`, and download API); `metadata` for phase/status; `lib/spec-generation/spec-generation-schemas.ts` + `GENERATE_SPEC_TASK_ID` in `lib/trigger-task-ids.ts`
 - [x] `npm run build` passes
 
 ## Feature 26 — Design agent frontend (`context/feature-specs/26-design-agent-frontend.md`)
@@ -122,7 +129,7 @@ Completed tasks:
 
 Completed tasks:
 
-- [x] `trigger/design-agent.ts` — planning via Gemini tool-loop (`generateText` + canvas tools in `gemini-plan.ts`); `Liveblocks.getStorageDocument` + `snapshotFromLiveblocksJson`; `mutateFlow` applies sorted actions; `broadcastEvent` + ephemeral `setPresence`; clears presence on completion/error
+- [x] `trigger/design-agent.ts` — planning via OpenRouter tool-loop (`generateText` + canvas tools in `gemini-plan.ts`); `Liveblocks.getStorageDocument` + `snapshotFromLiveblocksJson`; `mutateFlow` applies sorted actions; `broadcastEvent` + ephemeral `setPresence`; clears presence on completion/error
 - [x] `lib/design-agent/*` — per-action Zod tool schemas + `applyDesignAgentAction`, `finishDesignPlan` tool for summary; presence/broadcast helpers; storage snapshot parser
 - [x] `lib/liveblocks-node-client.ts` — shared `createLiveblocksClient()` for Next + Trigger (`lib/liveblocks-server.ts` uses it)
 - [x] `liveblocks.config.ts` — `RoomEvent` typed as `AiDesignStatusEventPayload` (+ `FeedMessageData` in Feature 24)
@@ -131,7 +138,7 @@ Completed tasks:
 - [x] `components/editor/ai-workspace-sidebar.tsx` — `/api/ai/design` trigger path; sidebar subscribes to Liveblocks feed in Feature 24
 - [x] `components/editor/canvas-peer-cursors.tsx` — live cursors + `presence.thinking` UX (badge spinner in Feature 24)- [x] `npm run build` passes
 
-**Trigger.dev cloud:** set `GEMINI_API_KEY` and `LIVEBLOCKS_SECRET_KEY` (same values as local) on the Trigger environment so deployed tasks can call Gemini and Liveblocks.
+**Trigger.dev cloud:** set `OPENROUTER_API_KEY` and `LIVEBLOCKS_SECRET_KEY` (same values as local) on the Trigger environment so deployed tasks can call OpenRouter and Liveblocks.
 
 ## Feature 22 — Design agent API (`context/feature-specs/22-design-agent-api.md`)
 
@@ -164,7 +171,7 @@ Completed tasks:
 Completed tasks:
 
 - [x] `components/editor/ai-workspace-sidebar.tsx` — dedicated sidebar UI: header (`AI Workspace` / subtitle, bot icon, close); shadcn `Tabs` (`AI Architect` / `Specs`); Architect tab with `ScrollArea`, empty state, starter chips (`bg-subtle` / `text-accent-text`), local-only chat bubbles (user / assistant styles), auto-height `Textarea` (72–160px), Enter vs Shift+Enter, `bg-accent text-white` send; Specs tab with `Generate Spec` + static demo card (`bg-elevated`) and disabled download
-- [x] `components/editor/editor-workspace-viewport.tsx` — composes sidebar; preserves width/opacity slide-in; parent-controlled `aiSidebarOpen` / `setAiSidebarOpen`; outer surface `bg-base/95`, `border-surface-border`, `shadow-lg`, `backdrop-blur-sm`
+- [x] `components/editor/editor-workspace-viewport.tsx` — composes sidebar; parent-controlled `aiSidebarOpen` / `setAiSidebarOpen`; AI panel is a floating card (`rounded-2xl`, full border, `shadow-xl`, `top-18` / `right-4` / `bottom-4` insets so it does not touch the navbar or screen edges) with slide-in transform + opacity transition; outer surface `bg-base/95`, `backdrop-blur-sm`
 - [x] `app/globals.css` — `@theme` aliases `primary-text`, `muted-text`, `accent-text`, `brand-dim` for spec token class names
 - [x] `npm run build` passes
 

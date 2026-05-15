@@ -15,6 +15,10 @@ import {
 import { snapshotFromLiveblocksJson } from "../lib/design-agent/storage-snapshot"
 import { createLiveblocksClient } from "../lib/liveblocks-node-client"
 import { DESIGN_AGENT_TASK_ID } from "../lib/trigger-task-ids"
+import {
+  liveblocksCanvasEdgeSync,
+  liveblocksCanvasNodeSync,
+} from "../lib/canvas-liveblocks-flow-sync"
 import type { CanvasEdge, CanvasNode } from "../types/canvas"
 
 export type DesignAgentPayload = {
@@ -33,7 +37,7 @@ async function finishPresence(
   })
 }
 
-/** Gemini-backed design agent: plans canvas edits, applies via Liveblocks `mutateFlow`, broadcasts status + ephemeral presence. */
+/** Design agent: plans canvas edits via OpenRouter tool-loop, applies via Liveblocks `mutateFlow`, broadcasts status + ephemeral presence. */
 export const designAgentTask = task({
   id: DESIGN_AGENT_TASK_ID,
   run: async (payload: DesignAgentPayload, { ctx }) => {
@@ -64,7 +68,7 @@ export const designAgentTask = task({
       const { nodes: snapNodes, edges: snapEdges } =
         snapshotFromLiveblocksJson(rawDoc)
 
-      await emit("Interpreting your prompt with Gemini…", "processing")
+      await emit("Interpreting your prompt…", "processing")
 
       const plan = await generateDesignAgentPlan({
         prompt: payload.prompt,
@@ -84,7 +88,12 @@ export const designAgentTask = task({
       const sorted = sortDesignActions(plan.actions)
 
       await mutateFlow<CanvasNode, CanvasEdge>(
-        { client: liveblocks, roomId },
+        {
+          client: liveblocks,
+          roomId,
+          nodes: { sync: liveblocksCanvasNodeSync },
+          edges: { sync: liveblocksCanvasEdgeSync },
+        },
         async (flow) => {
           let i = 0
           for (const action of sorted) {

@@ -1,29 +1,16 @@
 import { randomUUID } from "node:crypto";
 
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { put } from "@vercel/blob";
 import { generateText } from "ai";
 import { logger, metadata, task } from "@trigger.dev/sdk/v3";
 
+import { getOpenRouterChatModel } from "../lib/ai/openrouter";
 import {
   generateSpecTaskPayloadSchema,
   type GenerateSpecTaskPayload,
 } from "../lib/spec-generation/spec-generation-schemas";
 import { getUnacceleratedPrisma } from "../lib/prisma";
 import { GENERATE_SPEC_TASK_ID } from "../lib/trigger-task-ids";
-
-function resolveGoogleGenerativeAiApiKey(): string {
-  const key =
-    process.env.GEMINI_API_KEY?.trim() ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
-    process.env.GOOGLE_API_KEY?.trim();
-  if (!key) {
-    throw new Error(
-      "No Google AI API key: set GEMINI_API_KEY or GOOGLE_GENERATIVE_AI_API_KEY (or GOOGLE_API_KEY)."
-    );
-  }
-  return key;
-}
 
 function buildSpecPrompt(payload: GenerateSpecTaskPayload): string {
   const chatBlock =
@@ -104,12 +91,8 @@ export const generateSpecTask = task({
     try {
       await metadata.set("phase", "generating").set("status", "generating");
 
-      const googleGenAi = createGoogleGenerativeAI({
-        apiKey: resolveGoogleGenerativeAiApiKey(),
-      });
-
       const result = await generateText({
-        model: googleGenAi("gemini-2.5-flash"),
+        model: getOpenRouterChatModel(),
         system: SYSTEM,
         prompt: buildSpecPrompt(payload),
       });

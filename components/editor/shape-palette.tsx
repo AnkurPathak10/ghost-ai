@@ -8,21 +8,16 @@ import {
   Pill,
   RectangleHorizontal,
 } from "lucide-react"
-import { useCallback, useState, type DragEvent } from "react"
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 
 import { CanvasNodeSurface } from "@/components/editor/canvas-node-surface"
 import { cn } from "@/lib/utils"
 import {
   buildShapeDragPayload,
-  CANVAS_SHAPE_DRAG_MIME,
   DEFAULT_NEW_NODE_COLOR,
-  serializeShapeDragPayload,
+  type CanvasShapeDragPayload,
 } from "@/lib/canvas-shape-drag"
 import type { NodeShape } from "@/types/canvas"
-
-/** Invisible pixel — hides default drag image so the custom ghost can follow the cursor. */
-const TRANSPARENT_GIF =
-  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
 
 const SHAPES: { shape: NodeShape; label: string; Icon: typeof Circle }[] = [
   { shape: "rectangle", label: "Rectangle", Icon: RectangleHorizontal },
@@ -41,52 +36,139 @@ type DragGhostState = {
   y: number
 }
 
+type ShapePaletteProps = {
+  onPlaceShape: (
+    payload: CanvasShapeDragPayload,
+    clientX: number,
+    clientY: number
+  ) => void
+}
+
 function ShapeDragButton({
   shape,
   label,
   Icon,
-  onPaletteDragStart,
+  onPointerShapeDown,
 }: (typeof SHAPES)[number] & {
-  onPaletteDragStart: (
-    e: DragEvent<HTMLButtonElement>,
+  onPointerShapeDown: (
+    e: ReactPointerEvent<HTMLButtonElement>,
     shape: NodeShape
   ) => void
 }) {
   return (
     <button
       type="button"
-      draggable
-      onDragStart={(e) => onPaletteDragStart(e, shape)}
       aria-label={`Drag ${label} onto canvas`}
       title={label}
       className={cn(
-        "flex size-10 shrink-0 cursor-grab items-center justify-center rounded-xl",
+        "flex size-10 shrink-0 touch-none cursor-grab items-center justify-center rounded-xl",
         "border border-transparent bg-subtle text-copy-secondary",
         "transition-[color,background-color,border-color,box-shadow]",
         "hover:border-surface-border hover:bg-elevated hover:text-copy-primary",
         "active:cursor-grabbing"
       )}
+      onPointerDown={(e) => onPointerShapeDown(e, shape)}
     >
       <Icon className="size-5" strokeWidth={1.75} aria-hidden />
     </button>
   )
 }
 
-export function ShapePalette() {
+export function ShapePalette({ onPlaceShape }: ShapePaletteProps) {
   const [ghost, setGhost] = useState<DragGhostState | null>(null)
 
-  const onPaletteDragStart = useCallback(
-    (e: DragEvent<HTMLButtonElement>, shape: NodeShape) => {
-      const payload = buildShapeDragPayload(shape)
-      e.dataTransfer.effectAllowed = "copy"
-      e.dataTransfer.setData(
-        CANVAS_SHAPE_DRAG_MIME,
-        serializeShapeDragPayload(payload)
-      )
+  const dragRef = useRef<{
+    pointerId: number
+    payload: CanvasShapeDragPayload
+    target: HTMLButtonElement
+    lastClientX: number
+    lastClientY: number
+    cleanupWindow: () => void
+  } | null>(null)
 
-      const img = new Image()
-      img.src = TRANSPARENT_GIF
-      e.dataTransfer.setDragImage(img, 0, 0)
+  const endDrag = useCallback(
+    (e: globalThis.PointerEvent, place: boolean) => {
+      const drag = dragRef.current
+      if (!drag || drag.pointerId !== e.pointerId) {
+        return
+      }
+      drag.cleanupWindow()
+      dragRef.current = null
+      try {
+        drag.target.releasePointerCapture(e.pointerId)
+      } catch {
+        /* already released */
+      }
+      setGhost(null)
+      if (!place) {
+        return
+      }
+      const unreliable = e.clientX === 0 && e.clientY === 0
+      const x = unreliable ? drag.lastClientX : e.clientX
+      const y = unreliable ? drag.lastClientY : e.clientY
+      onPlaceShape(drag.payload, x, y)
+    },
+    [onPlaceShape]
+  )
+
+  const onPointerShapeDown = useCallback(
+    (e: ReactPointerEvent<HTMLButtonElement>, shape: NodeShape) => {
+      if (e.button !== 0 || !e.isPrimary) {
+        return
+      }
+      e.preventDefault()
+      e.stopPropagation()
+      const payload = buildShapeDragPayload(shape)
+      const button = e.currentTarget
+      button.setPointerCapture(e.pointerId)
+
+      const onWindowMove = (ev: globalThis.PointerEvent) => {
+        if (ev.pointerId !== e.pointerId) {
+          return
+        }
+        if (ev.clientX !== 0 || ev.clientY !== 0) {
+          const d = dragRef.current
+          if (d) {
+            d.lastClientX = ev.clientX
+            d.lastClientY = ev.clientY
+          }
+          setGhost((g) =>
+            g ? { ...g, x: ev.clientX, y: ev.clientY } : null
+          )
+        }
+      }
+
+      const onWindowUp = (ev: globalThis.PointerEvent) => {
+        if (ev.pointerId !== e.pointerId) {
+          return
+        }
+        endDrag(ev, true)
+      }
+
+      const onWindowCancel = (ev: globalThis.PointerEvent) => {
+        if (ev.pointerId !== e.pointerId) {
+          return
+        }
+        endDrag(ev, false)
+      }
+
+      const opts = { capture: true } as const
+      window.addEventListener("pointermove", onWindowMove, opts)
+      window.addEventListener("pointerup", onWindowUp, opts)
+      window.addEventListener("pointercancel", onWindowCancel, opts)
+
+      dragRef.current = {
+        pointerId: e.pointerId,
+        payload,
+        target: button,
+        lastClientX: e.clientX,
+        lastClientY: e.clientY,
+        cleanupWindow: () => {
+          window.removeEventListener("pointermove", onWindowMove, opts)
+          window.removeEventListener("pointerup", onWindowUp, opts)
+          window.removeEventListener("pointercancel", onWindowCancel, opts)
+        },
+      }
 
       setGhost({
         shape: payload.shape,
@@ -95,23 +177,8 @@ export function ShapePalette() {
         x: e.clientX,
         y: e.clientY,
       })
-
-      const onDrag = (ev: globalThis.DragEvent) => {
-        if (ev.clientX !== 0 || ev.clientY !== 0) {
-          setGhost((g) =>
-            g ? { ...g, x: ev.clientX, y: ev.clientY } : null
-          )
-        }
-      }
-      const onEnd = () => {
-        document.removeEventListener("drag", onDrag)
-        document.removeEventListener("dragend", onEnd, true)
-        setGhost(null)
-      }
-      document.addEventListener("drag", onDrag)
-      document.addEventListener("dragend", onEnd, true)
     },
-    []
+    [endDrag]
   )
 
   return (
@@ -137,7 +204,7 @@ export function ShapePalette() {
       ) : null}
       <div
         className={cn(
-          "pointer-events-auto absolute bottom-6 left-1/2 z-10 -translate-x-1/2",
+          "pointer-events-auto fixed bottom-6 left-1/2 z-10 -translate-x-1/2",
           "flex items-center gap-1 rounded-full border border-surface-border",
           "bg-surface/95 px-2 py-1.5 shadow-lg backdrop-blur-sm"
         )}
@@ -147,7 +214,7 @@ export function ShapePalette() {
           <ShapeDragButton
             key={entry.shape}
             {...entry}
-            onPaletteDragStart={onPaletteDragStart}
+            onPointerShapeDown={onPointerShapeDown}
           />
         ))}
       </div>
