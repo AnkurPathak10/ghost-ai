@@ -29,10 +29,10 @@ const SHAPE_IDS = [
   "hexagon",
 ] as const satisfies readonly NodeShape[]
 
-/** Palette token ids (never hex) — shared by Gemini tools and canvas apply. */
+/** Palette token ids (never hex) — shared by design-agent tools and canvas apply. */
 export const paletteSchema = z.enum(PALETTE_IDS)
 
-/** Allowed node shapes — shared by Gemini tools and canvas apply. */
+/** Allowed node shapes — shared by design-agent tools and canvas apply. */
 export const shapeSchema = z.enum(SHAPE_IDS)
 
 export const addNodeToolSchema = z.object({
