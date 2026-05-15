@@ -13,7 +13,6 @@ import {
   ConnectionMode,
   MarkerType,
   ReactFlow,
-  ReactFlowProvider,
   useReactFlow,
   useStoreApi,
 } from "@xyflow/react"
@@ -374,11 +373,7 @@ function CollaborativeFlowCanvasInner({ projectId }: { projectId: string }) {
 function CollaborativeFlowCanvas() {
   const { id: projectId } = useRoom()
 
-  return (
-    <ReactFlowProvider>
-      <CollaborativeFlowCanvasInner key={projectId} projectId={projectId} />
-    </ReactFlowProvider>
-  )
+  return <CollaborativeFlowCanvasInner key={projectId} projectId={projectId} />
 }
 
 function CanvasLoadingFallback() {

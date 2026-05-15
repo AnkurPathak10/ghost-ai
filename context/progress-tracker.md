@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Feature 26 (design agent AI sidebar — Trigger realtime + feeds) — complete
+- Feature 29 (Spec UI integration — AI sidebar Specs tab) — complete
 
 ## Current Goal
 
-- Next numbered feature spec after 26 (TBD)
+- Next numbered feature spec after 29 (TBD)
 
 ## Infrastructure — Trigger.dev
 
@@ -19,6 +19,8 @@ Update this file whenever the current phase, active feature, or implementation s
 - [x] `.gitignore` — `.trigger`
 
 **Local setup:** In `.env.local`, set `TRIGGER_PROJECT_REF` (e.g. `proj_kqixnczjzspllkwxvkeo`) and the dev **secret key** as `TRIGGER_SECRET_KEY` from the [Trigger.dev dashboard](https://cloud.trigger.dev). Run `npx trigger.dev@latest login` once if the CLI prompts for auth, then `npm run trigger:dev` alongside Next.js.
+
+**Trigger.dev:** For `generate-spec`, set `BLOB_READ_WRITE_TOKEN` (and `DIRECT_DATABASE_URL` when Next.js uses Accelerate, same as `TaskRun`) on the Trigger environment so completed runs persist `ProjectSpec` + private blob uploads.
 
 ## Feature 03 — Auth (`context/feature-specs/03-auth.md`)
 
@@ -53,7 +55,36 @@ Integration / verification:
 
 ## Next Up
 
-- Next numbered feature spec after 26 (TBD).
+- Next numbered feature spec after 29 (TBD).
+
+## Feature 29 — Spec UI integration (`context/feature-specs/29-spec-ui-integration.md`)
+
+Completed tasks:
+
+- [x] `GET /api/projects/[projectId]/specs` — Clerk + `getProjectAccessibleToEditor`; lists `ProjectSpec` metadata (`id`, ISO `createdAt`, `filename`) for the project (no blob URLs); supports the Specs tab refresh after generation
+- [x] `components/editor/ai-workspace-specs-panel.tsx` — compact scrollable list; preview `Dialog` + `ScrollArea`; Markdown via `react-markdown`; download links to existing download route; Generate Spec wires `POST /api/ai/spec` + token + `useRealtimeRun` completion → list refresh; preview content only held while the modal is open
+- [x] `components/editor/editor-workspace-viewport.tsx` — single `ReactFlowProvider` wraps canvas + AI rail so `useLiveblocksFlow` can read live nodes/edges for spec generation
+- [x] `components/editor/collaborative-canvas.tsx` — inner `ReactFlowProvider` removed (provider lifted to viewport)
+- [x] `components/editor/ai-workspace-sidebar.tsx` — Specs tab renders `AiWorkspaceSpecsPanel` with room chat history passed for spec context
+- [x] `npm run build` and `npm run lint` pass
+
+## Feature 28 — Spec persistence & download (`context/feature-specs/28-spec-persistence-download.md`)
+
+Completed tasks:
+
+- [x] Prisma `ProjectSpec` — `id`, `projectId` → `Project`, `filePath` (blob URL), `createdAt`; `Project.projectSpecs` relation; migration `20260515064407_add_project_spec`
+- [x] `trigger/generate-spec.ts` — private `put` at `specs/{projectId}/{specId}.md`; `getUnacceleratedPrisma().projectSpec.create` with blob URL; successful runs return `{ ok: true, markdown, specId }` and set metadata `specId`; clear errors when `BLOB_READ_WRITE_TOKEN` or direct DB client is missing
+- [x] `GET /api/projects/[projectId]/specs/[specId]/download` — Clerk + `getProjectAccessibleToEditor`; `findFirst` ensures spec belongs to project; streams blob body as `text/markdown` attachment (`spec-{id}.md`); no public blob URL in JSON
+- [x] `npm run build` and `npm run lint` pass
+
+## Feature 27 — Spec generation flow (`context/feature-specs/27-spec-generation-flow.md`)
+
+Completed tasks:
+
+- [x] `POST /api/ai/spec` — Zod body (`roomId`, `chatHistory`, `nodes`, `edges`); Clerk + `getProjectAccessibleToEditor(roomId)` (no client `projectId`); `tasks.trigger` for `generate-spec` with server-resolved `projectId`; Prisma `TaskRun`; returns `{ runId }`; `503` without `TRIGGER_SECRET_KEY`
+- [x] `POST /api/ai/spec/token` — JSON `{ runId }`; `TaskRun` ownership; `auth.createPublicToken` scoped to run + `generate-spec`; `expirationTime: "1h"`; returns `{ token }`
+- [x] `trigger/generate-spec.ts` — Zod payload, Gemini via `@ai-sdk/google` + `generateText`, Markdown output (`ok` + `markdown` or `error`; Feature 28 adds Blob persistence, `specId`, and download API); `metadata` for phase/status; `lib/spec-generation/spec-generation-schemas.ts` + `GENERATE_SPEC_TASK_ID` in `lib/trigger-task-ids.ts`
+- [x] `npm run build` passes
 
 ## Feature 26 — Design agent frontend (`context/feature-specs/26-design-agent-frontend.md`)
 

@@ -15,7 +15,7 @@
 ## System Boundaries
 
 - `proxy.ts` (project root, Next.js 16) — Clerk `clerkMiddleware`: session + route protection; public routes include `/`, sign-in, sign-up URLs from env, and `/api/projects/*` (handlers enforce `401`/`403` with JSON responses instead of redirects).
-- `app/api` — Authenticated request handlers: input validation, ownership checks, task triggering, and persistence.
+- `app/api` — Authenticated request handlers: input validation, ownership checks, task triggering, persistence, and artifact streaming (for example canvas JSON, collaborator lists, spec metadata list + Markdown download, design/spec task triggers).
 - `trigger` — Long-running background jobs: AI design generation and spec generation.
 - `lib` — Shared infrastructure: Prisma client, access control helpers, and utilities.
 - `components` — UI composition: canvas surfaces, sidebars, dialogs, and interactive elements.
@@ -60,7 +60,7 @@
 
 - Input: current canvas graph and project context.
 - Execution: durable background task via Trigger.dev.
-- Output: Markdown technical spec saved to the filesystem and linked to the project in the database.
+- Output: Markdown technical spec uploaded to Vercel Blob and linked to the project via a `ProjectSpec` row.
 
 ## Invariants
 

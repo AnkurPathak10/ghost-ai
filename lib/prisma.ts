@@ -108,7 +108,7 @@ function unacceleratedDirectKey(directUrl: string): string {
 }
 
 /**
- * Prisma Accelerate omits some delegates (e.g. `taskRun`) and nested relation
+ * Prisma Accelerate omits some delegates (e.g. `taskRun`, `projectSpec`) and nested relation
  * args on `project` updates. For those operations use a direct Postgres client.
  *
  * When `DATABASE_URL` is `postgres://`, returns the same logical client as {@link prisma}.

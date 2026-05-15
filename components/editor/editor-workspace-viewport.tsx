@@ -5,17 +5,19 @@ import { CollaborativeCanvas } from "@/components/editor/collaborative-canvas"
 import { EditorLiveblocksCollaborationRoot } from "@/components/editor/editor-liveblocks-collaboration-root"
 import { useEditorWorkspace } from "@/components/editor/editor-workspace-provider"
 import { cn } from "@/lib/utils"
+import { ReactFlowProvider } from "@xyflow/react"
 
 export function EditorWorkspaceViewport({ roomId }: { roomId: string }) {
   const { aiSidebarOpen, setAiSidebarOpen } = useEditorWorkspace()
 
   return (
     <EditorLiveblocksCollaborationRoot roomId={roomId}>
-      <div className="flex min-h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-base">
-        <div className="relative flex min-w-0 flex-1 flex-col bg-base">
-          <CollaborativeCanvas />
-        </div>
-        <aside
+      <ReactFlowProvider>
+        <div className="flex min-h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-base">
+          <div className="relative flex min-w-0 flex-1 flex-col bg-base">
+            <CollaborativeCanvas />
+          </div>
+          <aside
           aria-hidden={!aiSidebarOpen}
           className={cn(
             "shrink-0 border-l border-surface-border bg-base/95 shadow-lg backdrop-blur-sm transition-[width,opacity] duration-200 ease-out",
@@ -32,6 +34,7 @@ export function EditorWorkspaceViewport({ roomId }: { roomId: string }) {
           </div>
         </aside>
       </div>
+      </ReactFlowProvider>
     </EditorLiveblocksCollaborationRoot>
   )
 }
