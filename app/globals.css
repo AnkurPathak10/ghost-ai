@@ -136,3 +136,25 @@
   --sidebar-border: #2a2a30;
   --sidebar-ring: #00c8d4;
 }
+
+/**
+ * Liveblocks developer badge — core uses inline styles; paired with DOM removal
+ * in RemoveLiveblocksBrandBadge (editor-liveblocks-collaboration-root.tsx).
+ */
+#liveblocks-badge {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  clip-path: inset(50%) !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+}
+
+/**
+ * @liveblocks/react-ui — hide default “Powered by Liveblocks” link in composer footers
+ * when that package renders prebuilt UI (class from their styles.css).
+ */
+.lb-composer-attribution {
+  display: none !important;
+}

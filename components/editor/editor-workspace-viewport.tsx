@@ -13,27 +13,24 @@ export function EditorWorkspaceViewport({ roomId }: { roomId: string }) {
   return (
     <EditorLiveblocksCollaborationRoot roomId={roomId}>
       <ReactFlowProvider>
-        <div className="flex min-h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-base">
-          <div className="relative flex min-w-0 flex-1 flex-col bg-base">
-            <CollaborativeCanvas />
-          </div>
+        <div className="relative h-[calc(100vh-3.5rem)] min-h-0 w-full overflow-hidden bg-base">
+          <CollaborativeCanvas />
           <aside
-          aria-hidden={!aiSidebarOpen}
-          className={cn(
-            "shrink-0 border-l border-surface-border bg-base/95 shadow-lg backdrop-blur-sm transition-[width,opacity] duration-200 ease-out",
-            aiSidebarOpen
-              ? "w-[min(100%,24rem)] opacity-100 sm:w-96"
-              : "w-0 overflow-hidden border-transparent opacity-0"
-          )}
-        >
-          <div className="flex h-full min-h-[calc(100vh-3.5rem)] w-[min(100vw,24rem)] flex-col sm:w-96">
+            aria-hidden={!aiSidebarOpen}
+            className={cn(
+              "fixed top-14 right-0 z-30 flex h-[calc(100vh-3.5rem)] w-[min(100%,24rem)] flex-col border-l border-surface-border bg-base/95 shadow-lg backdrop-blur-sm sm:w-96",
+              "transition-[transform,visibility] duration-200 ease-out",
+              aiSidebarOpen
+                ? "visible translate-x-0"
+                : "pointer-events-none invisible translate-x-full"
+            )}
+          >
             <AiWorkspaceSidebar
               projectId={roomId}
               onClose={() => setAiSidebarOpen(false)}
             />
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
       </ReactFlowProvider>
     </EditorLiveblocksCollaborationRoot>
   )

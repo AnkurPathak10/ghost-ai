@@ -11,7 +11,25 @@ import {
   DESIGN_AGENT_LIVEBLOCKS_USER_ID,
   DESIGN_AGENT_USER_INFO,
 } from "@/lib/design-agent/constants"
-import { useCallback, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useState, type ReactNode } from "react"
+
+/**
+ * Liveblocks core injects `#liveblocks-badge` on `document.body` when the server
+ * sends `meta.showBrand` (typical on free tier). CSS alone can lose to injection
+ * timing; remove the node whenever it appears.
+ */
+function RemoveLiveblocksBrandBadge() {
+  useEffect(() => {
+    const remove = () => {
+      document.getElementById("liveblocks-badge")?.remove()
+    }
+    remove()
+    const observer = new MutationObserver(remove)
+    observer.observe(document.body, { childList: true })
+    return () => observer.disconnect()
+  }, [])
+  return null
+}
 
 export function EditorLiveblocksCollaborationRoot({
   roomId,
@@ -36,6 +54,7 @@ export function EditorLiveblocksCollaborationRoot({
         })
       }
     >
+      <RemoveLiveblocksBrandBadge />
       <RoomProvider
         id={roomId}
         initialPresence={{ cursor: null, thinking: false }}

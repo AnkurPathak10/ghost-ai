@@ -53,6 +53,13 @@ Integration / verification:
 
 - None.
 
+## Recent fixes (editor)
+
+- **Liveblocks flow sync:** `lib/canvas-liveblocks-flow-sync.ts` — `useLiveblocksFlow` + Trigger `mutateFlow` now use `sync: { "*": { data: true } }` for nodes so `data` (labels, colors, shapes) round-trips; previously default LB config could drop `data`, yielding empty/broken nodes (AI Trigger “applied” but blank canvas).
+- **Shape palette / Liveblocks race:** `CanvasShapePaletteBridge` stays inside `<ReactFlow>` for valid `screenToFlowPosition` / `domNode` (XYFlow). `@liveblocks/react-flow`'s `onNodesChange` is a no-op until `storage.get("flow")` exists while `setInitialStorage` runs in `useEffect`, so palette drops could run too early; `CollaborativeFlowCanvasInner` now runs `useLayoutEffect` + `useMutation` to seed `flow` (empty `LiveMap`s) before paint when missing. Palette drag uses `capture: true` window pointer listeners and falls back to last client coords when `pointerup` reports `(0,0)`. Palette placement retries until Liveblocks `storage.flow` exists and XYFlow `domNode` is set, hit-tests the `.react-flow__pane`, and defers work past a microtask so storage seeding can apply (fixes dev-only silent drops).
+- **Canvas node:** safe defaults when `props.data` is missing.
+- **Hydration:** REST seed defers ~320ms so Liveblocks storage can arrive before treating the canvas as empty.
+
 ## Next Up
 
 - Next numbered feature spec after 29 (TBD).

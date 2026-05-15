@@ -80,14 +80,15 @@ export function CanvasViewportControls() {
   return (
     <div
       className={cn(
-        "pointer-events-auto absolute bottom-6 left-6 z-20",
-        "flex items-center gap-1 rounded-full border border-surface-border",
-        "bg-surface/95 px-1.5 py-1 shadow-lg backdrop-blur-sm"
+        "pointer-events-auto fixed z-20",
+        "bottom-6 left-4 flex flex-col items-center gap-0.5 rounded-2xl border border-surface-border",
+        "bg-surface/95 px-1.5 py-1.5 shadow-lg backdrop-blur-sm",
+        "sm:left-6"
       )}
       role="toolbar"
       aria-label="Canvas view"
     >
-      <div className="flex items-center gap-0">
+      <div className="flex flex-col items-center gap-0">
         <IconCtrl label="Zoom out" onClick={zoomOut}>
           <Minus className="size-4" strokeWidth={2} aria-hidden />
         </IconCtrl>
@@ -100,11 +101,11 @@ export function CanvasViewportControls() {
       </div>
 
       <div
-        className="mx-0.5 h-6 w-px shrink-0 bg-surface-border/70"
+        className="my-0.5 h-px w-6 shrink-0 bg-surface-border/70"
         aria-hidden
       />
 
-      <div className="flex items-center gap-0">
+      <div className="flex flex-col items-center gap-0">
         <IconCtrl label="Undo" onClick={onUndo} disabled={!canUndo}>
           <Undo2 className="size-4" strokeWidth={2} aria-hidden />
         </IconCtrl>

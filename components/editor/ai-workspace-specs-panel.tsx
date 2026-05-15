@@ -20,6 +20,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  liveblocksCanvasEdgeSync,
+  liveblocksCanvasNodeSync,
+} from "@/lib/canvas-liveblocks-flow-sync"
 import { cn } from "@/lib/utils"
 import type { SpecGenerationApiBody } from "@/lib/spec-generation/spec-generation-schemas"
 import type { CanvasEdge, CanvasNode } from "@/types/canvas"
@@ -88,8 +92,8 @@ export function AiWorkspaceSpecsPanel({
     CanvasEdge
   >({
     suspense: false,
-    nodes: { initial: [] },
-    edges: { initial: [] },
+    nodes: { initial: [], sync: liveblocksCanvasNodeSync },
+    edges: { initial: [], sync: liveblocksCanvasEdgeSync },
   })
 
   const [specs, setSpecs] = useState<SpecListItem[]>([])

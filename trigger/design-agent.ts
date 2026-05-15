@@ -15,6 +15,10 @@ import {
 import { snapshotFromLiveblocksJson } from "../lib/design-agent/storage-snapshot"
 import { createLiveblocksClient } from "../lib/liveblocks-node-client"
 import { DESIGN_AGENT_TASK_ID } from "../lib/trigger-task-ids"
+import {
+  liveblocksCanvasEdgeSync,
+  liveblocksCanvasNodeSync,
+} from "../lib/canvas-liveblocks-flow-sync"
 import type { CanvasEdge, CanvasNode } from "../types/canvas"
 
 export type DesignAgentPayload = {
@@ -84,7 +88,12 @@ export const designAgentTask = task({
       const sorted = sortDesignActions(plan.actions)
 
       await mutateFlow<CanvasNode, CanvasEdge>(
-        { client: liveblocks, roomId },
+        {
+          client: liveblocks,
+          roomId,
+          nodes: { sync: liveblocksCanvasNodeSync },
+          edges: { sync: liveblocksCanvasEdgeSync },
+        },
         async (flow) => {
           let i = 0
           for (const action of sorted) {
