@@ -14,7 +14,7 @@ export function resolveOpenRouterApiKey(): string {
 }
 
 export function openRouterModelId(): string {
-  const id = process.env.OPENROUTER_MODEL?.trim()
+  const id = process.env.DEFAULT_OPENROUTER_MODEL?.trim()
   return id && id.length > 0 ? id : DEFAULT_OPENROUTER_MODEL
 }
 
