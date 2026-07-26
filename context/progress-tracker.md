@@ -90,7 +90,7 @@ Completed tasks:
 
 - [x] `POST /api/ai/spec` — Zod body (`roomId`, `chatHistory`, `nodes`, `edges`); Clerk + `getProjectAccessibleToEditor(roomId)` (no client `projectId`); `tasks.trigger` for `generate-spec` with server-resolved `projectId`; Prisma `TaskRun`; returns `{ runId }`; `503` without `TRIGGER_SECRET_KEY`
 - [x] `POST /api/ai/spec/token` — JSON `{ runId }`; `TaskRun` ownership; `auth.createPublicToken` scoped to run + `generate-spec`; `expirationTime: "1h"`; returns `{ token }`
-- [x] `trigger/generate-spec.ts` — Zod payload, OpenRouter via `@ai-sdk/openai` + `generateText` (`lib/ai/openrouter.ts`, default `openai/gpt-oss-120b:free`), Markdown output (`ok` + `markdown` or `error`; Feature 28 adds Blob persistence, `specId`, and download API); `metadata` for phase/status; `lib/spec-generation/spec-generation-schemas.ts` + `GENERATE_SPEC_TASK_ID` in `lib/trigger-task-ids.ts`
+- [x] `trigger/generate-spec.ts` — Zod payload, OpenRouter via `@ai-sdk/openai` + `generateText` (`lib/ai/openrouter.ts`, default `nvidia/nemotron-3-ultra-550b-a55b:free`), Markdown output (`ok` + `markdown` or `error`; Feature 28 adds Blob persistence, `specId`, and download API); `metadata` for phase/status; `lib/spec-generation/spec-generation-schemas.ts` + `GENERATE_SPEC_TASK_ID` in `lib/trigger-task-ids.ts`
 - [x] `npm run build` passes
 
 ## Feature 26 — Design agent frontend (`context/feature-specs/26-design-agent-frontend.md`)

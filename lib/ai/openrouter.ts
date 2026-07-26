@@ -1,7 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai"
 
-/** Default matches OpenRouter model page: https://openrouter.ai/openai/gpt-oss-120b:free/api */
-const DEFAULT_OPENROUTER_MODEL = "openai/gpt-oss-120b:free"
+/** Default matches OpenRouter model page: https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free/api */
+const DEFAULT_OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
 export function resolveOpenRouterApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY?.trim()
@@ -51,7 +51,7 @@ function getOpenRouterProvider(): ReturnType<typeof createOpenAI> {
 
 /**
  * Chat/completions model routed through OpenRouter (OpenAI-compatible API).
- * Uses `OPENROUTER_MODEL`; defaults to `openai/gpt-oss-120b:free`.
+ * Uses `OPENROUTER_MODEL`; defaults to `nvidia/nemotron-3-ultra-550b-a55b:free`.
  */
 export function getOpenRouterChatModel() {
   return getOpenRouterProvider()(openRouterModelId())
