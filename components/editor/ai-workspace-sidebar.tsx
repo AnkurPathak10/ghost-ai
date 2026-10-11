@@ -57,6 +57,24 @@ function selectLatestValidatedFeedStatus(
   return null
 }
 
+function selectTerminalStatusForRun(
+  messages: readonly { createdAt: number; data: unknown }[],
+  runId: string
+): AiStatusFeedMessageData | null {
+  const sorted = [...messages].sort((a, b) => b.createdAt - a.createdAt)
+  for (const message of sorted) {
+    const parsed = parseAiStatusFeedMessageData(message.data)
+    if (
+      parsed.ok &&
+      parsed.data.runId === runId &&
+      (parsed.data.phase === "complete" || parsed.data.phase === "error")
+    ) {
+      return parsed.data
+    }
+  }
+  return null
+}
+
 const chatTimeFormatter =
   typeof Intl !== "undefined"
     ? new Intl.DateTimeFormat(undefined, {
@@ -69,6 +87,33 @@ const CANVAS_GREEN = NODE_COLORS.find((n) => n.id === "green") ?? NODE_COLORS[0]
 
 const AI_ASSISTANT_SENDER = "Ghost AI"
 
+const TERMINAL_RUN_STATUSES = new Set([
+  "COMPLETED",
+  "FAILED",
+  "CRASHED",
+  "CANCELED",
+  "SYSTEM_FAILURE",
+  "EXPIRED",
+  "TIMED_OUT",
+])
+
+interface ObservedDesignRun {
+  runId: string
+  status: string
+  output: unknown
+}
+
+function isTerminalRunStatus(status: string | undefined): boolean {
+  return typeof status === "string" && TERMINAL_RUN_STATUSES.has(status.toUpperCase())
+}
+
+function designRunFailureMessage(status: string): string {
+  if (status.toUpperCase() === "TIMED_OUT") {
+    return "Design generation timed out after 5 minutes. Check the canvas for partial changes before trying again."
+  }
+  return "The design agent run did not finish successfully. Try again shortly."
+}
+
 function summarizeDesignRunCompletion(
   run:
     | { status?: string; output?: unknown; finishedAt?: Date | string }
@@ -76,13 +121,8 @@ function summarizeDesignRunCompletion(
 ): string {
   const status =
     typeof run?.status === "string" ? run.status.toUpperCase() : ""
-  if (
-    status === "FAILED" ||
-    status === "CRASHED" ||
-    status === "CANCELED" ||
-    status === "SYSTEM_FAILURE"
-  ) {
-    return "The design agent run did not finish successfully. Try again shortly."
+  if (isTerminalRunStatus(status) && status !== "COMPLETED") {
+    return designRunFailureMessage(status)
   }
   const raw = run?.output
   const out =
@@ -189,6 +229,7 @@ function AiWorkspaceSidebarRoomReady({
   const [chatSendError, setChatSendError] = useState<string | null>(null)
   const [designRunId, setDesignRunId] = useState<string | null>(null)
   const [designPublicToken, setDesignPublicToken] = useState<string | null>(null)
+  const [observedRun, setObservedRun] = useState<ObservedDesignRun | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
   const createFeed = useCreateFeed()
@@ -197,6 +238,7 @@ function AiWorkspaceSidebarRoomReady({
   const pendingRunRef = useRef<string | null>(null)
   /** Prevents duplicate final chat messages when both realtime + fallback fire. */
   const finalizedRunIdsRef = useRef<Set<string>>(new Set())
+  const publishedTerminalStatusIdsRef = useRef<Set<string>>(new Set())
 
   const feedState = useFeedMessages(AI_STATUS_FEED_ID, { limit: 100 })
   const chatFeedState = useFeedMessages(AI_CHAT_FEED_ID, { limit: 200 })
@@ -207,6 +249,66 @@ function AiWorkspaceSidebarRoomReady({
     }
     return selectLatestValidatedFeedStatus(feedState.messages)
   }, [feedState])
+
+  const trackedTerminalStatus = useMemo(() => {
+    if (!designRunId || feedState.isLoading || feedState.error) return null
+    return selectTerminalStatusForRun(feedState.messages, designRunId)
+  }, [designRunId, feedState])
+
+  const watchedRunId =
+    designRunId ??
+    (latestStatus &&
+    latestStatus.scope === "design" &&
+    isAiGenerationActive(latestStatus)
+      ? latestStatus.runId ?? null
+      : null)
+  const observedTerminalRun =
+    observedRun?.runId === watchedRunId &&
+    isTerminalRunStatus(observedRun.status)
+      ? observedRun
+      : null
+
+  useEffect(() => {
+    if (!watchedRunId || observedTerminalRun) return
+    const controller = new AbortController()
+    let timer: number | undefined
+
+    const check = async () => {
+      try {
+        const response = await fetch(
+          `/api/ai/design/status?runId=${encodeURIComponent(watchedRunId)}`,
+          { cache: "no-store", signal: controller.signal }
+        )
+        if (response.ok) {
+          const body = (await response.json()) as Partial<ObservedDesignRun>
+          if (
+            !controller.signal.aborted &&
+            body.runId === watchedRunId &&
+            typeof body.status === "string" &&
+            isTerminalRunStatus(body.status)
+          ) {
+            setObservedRun({
+              runId: watchedRunId,
+              status: body.status,
+              output: body.output,
+            })
+            return
+          }
+        }
+      } catch {
+        if (controller.signal.aborted) return
+      }
+      if (!controller.signal.aborted) {
+        timer = window.setTimeout(() => void check(), 2000)
+      }
+    }
+
+    void check()
+    return () => {
+      controller.abort()
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, [watchedRunId, observedTerminalRun])
 
   const validatedChatEntries = useMemo(() => {
     if (chatFeedState.isLoading || chatFeedState.error) {
@@ -243,7 +345,7 @@ function AiWorkspaceSidebarRoomReady({
     typeof designPublicToken === "string" &&
     designPublicToken.length > 0
 
-  const { run: triggerRun, error: triggerRunRealtimeError } = useRealtimeRun(
+  const { run: triggerRun } = useRealtimeRun(
     designRunId ?? undefined,
     {
       accessToken: designPublicToken ?? undefined,
@@ -251,18 +353,24 @@ function AiWorkspaceSidebarRoomReady({
     }
   )
 
-  const triggerRunRef = useRef(triggerRun)
-  useEffect(() => {
-    triggerRunRef.current = triggerRun
-  }, [triggerRun])
+  const realtimeTerminal =
+    triggerRun?.id === designRunId && isTerminalRunStatus(triggerRun.status)
 
   const isTrackedDesignRunExecuting =
     realtimeEnabled &&
+    !trackedTerminalStatus &&
+    !observedTerminalRun &&
+    !realtimeTerminal &&
     !(
       triggerRun?.id === designRunId && Boolean(triggerRun?.finishedAt)
     )
 
-  const generationShared = Boolean(latestStatus && isAiGenerationActive(latestStatus))
+  const generationShared = Boolean(
+    latestStatus &&
+      isAiGenerationActive(latestStatus) &&
+      !(observedTerminalRun && latestStatus.runId === observedTerminalRun.runId) &&
+      !(realtimeTerminal && latestStatus.runId === designRunId)
+  )
 
   /** Input muted while ours or anyone's AI run is in progress — canvas/presence parity (Feature 24). */
   const inputLocked =
@@ -366,71 +474,54 @@ function AiWorkspaceSidebarRoomReady({
     setDesignPublicToken(null)
   }, [])
 
-  /** Final realtime failure (no typed finish) — delayed to avoid races with subscription. */
+  /** The worker cannot publish a terminal feed event after Trigger kills it. */
   useEffect(() => {
-    const rid = designRunId
-    const token = designPublicToken
-    const err = triggerRunRealtimeError
-    if (
-      rid === null ||
-      token === null ||
-      err === undefined ||
-      err.message.length === 0
-    )
-      return
-    let disposed = false
-    const deadline = window.setTimeout(() => {
-      if (disposed) return
-      const current = triggerRunRef.current
-      if (
-        current?.id === rid &&
-        Boolean(current.finishedAt)
-      )
-        return
-      if (finalizedRunIdsRef.current.has(rid)) return
-      finalizedRunIdsRef.current.add(rid)
+    const terminal = observedTerminalRun
+    if (!terminal || !latestStatus || latestStatus.runId !== terminal.runId) return
+    if (!isAiGenerationActive(latestStatus)) return
+    if (publishedTerminalStatusIdsRef.current.has(terminal.runId)) return
 
-      ;(async () => {
-        const message = `Couldn't stay connected to Trigger.dev for this run (${err.message}). The job may still complete on the server — watch the canvas and shared AI status feed.`
-        try {
-          await pushArchitectChatPayload({
-            sender: AI_ASSISTANT_SENDER,
-            role: "assistant",
-            content: message,
-            timestamp: Date.now(),
-          })
-        } finally {
-          clearDesignRealtimeSession()
-          updateMyPresence({ thinking: false })
-          pendingRunRef.current = null
-        }
-      })()
-    }, 3000)
+    publishedTerminalStatusIdsRef.current.add(terminal.runId)
+    const phase =
+      terminal.status === "COMPLETED" &&
+      !(typeof terminal.output === "object" &&
+        terminal.output !== null &&
+        "ok" in terminal.output &&
+        terminal.output.ok === false)
+        ? "complete"
+        : "error"
+    const text =
+      phase === "complete"
+        ? "Design update complete."
+        : summarizeDesignRunCompletion(terminal)
 
-    return () => {
-      disposed = true
-      window.clearTimeout(deadline)
-    }
-  }, [
-    clearDesignRealtimeSession,
-    designPublicToken,
-    designRunId,
-    pushArchitectChatPayload,
-    triggerRunRealtimeError,
-    updateMyPresence,
-  ])
+    void createFeedMessage(AI_STATUS_FEED_ID, {
+      phase,
+      scope: "design",
+      text,
+      runId: terminal.runId,
+    } as JsonObject).catch(() => {
+      publishedTerminalStatusIdsRef.current.delete(terminal.runId)
+      setChatSendError("Run finished, but the shared status could not be updated.")
+    })
+  }, [createFeedMessage, latestStatus, observedTerminalRun])
 
   useEffect(() => {
     if (!designRunId || !designPublicToken) return
-    if (
-      triggerRun?.id !== designRunId ||
-      !Boolean(triggerRun?.finishedAt)
-    )
-      return
+    const realtimeFinished =
+      triggerRun?.id === designRunId &&
+      (Boolean(triggerRun.finishedAt) || isTerminalRunStatus(triggerRun.status))
+    if (!realtimeFinished && !trackedTerminalStatus && !observedTerminalRun) return
     if (finalizedRunIdsRef.current.has(designRunId)) return
 
     finalizedRunIdsRef.current.add(designRunId)
-    const copy = summarizeDesignRunCompletion(triggerRun)
+    const copy = realtimeFinished
+      ? summarizeDesignRunCompletion(triggerRun)
+      : observedTerminalRun
+        ? summarizeDesignRunCompletion(observedTerminalRun)
+      : trackedTerminalStatus?.phase === "error"
+        ? trackedTerminalStatus.text?.trim() || "The design agent run failed."
+        : trackedTerminalStatus?.text?.trim() || "Design updates were applied to the canvas."
 
     ;(async () => {
       try {
@@ -440,6 +531,8 @@ function AiWorkspaceSidebarRoomReady({
           content: copy,
           timestamp: Date.now(),
         })
+      } catch {
+        setChatSendError("Design finished, but its reply could not be posted to room chat.")
       } finally {
         updateMyPresence({ thinking: false })
         pendingRunRef.current = null
@@ -454,6 +547,8 @@ function AiWorkspaceSidebarRoomReady({
     triggerRun?.finishedAt,
     triggerRun?.id,
     triggerRun,
+    trackedTerminalStatus,
+    observedTerminalRun,
     updateMyPresence,
   ])
 
@@ -464,6 +559,7 @@ function AiWorkspaceSidebarRoomReady({
 
       setDesignRunPostBusy(true)
       setChatSendError(null)
+      setObservedRun(null)
       try {
         const userParsed = aiChatFeedMessageDataSchema.safeParse({
           sender: displayName,
@@ -615,6 +711,20 @@ function AiWorkspaceSidebarRoomReady({
   ])
 
   const accentSendEligible = draft.trim().length > 0 && !inputLocked
+  const observedFailureMessage =
+    observedRun &&
+    observedRun.runId === latestStatus?.runId &&
+    (observedRun.status !== "COMPLETED" ||
+      (typeof observedRun.output === "object" &&
+        observedRun.output !== null &&
+        "ok" in observedRun.output &&
+        observedRun.output.ok === false))
+      ? summarizeDesignRunCompletion(observedRun)
+      : null
+  const sharedFailureMessage =
+    latestStatus?.scope === "design" && latestStatus.phase === "error"
+      ? latestStatus.text?.trim() || "The design agent run failed."
+      : null
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
@@ -871,9 +981,9 @@ function AiWorkspaceSidebarRoomReady({
                 Send
               </Button>
             </div>
-            {chatSendError ? (
+            {chatSendError || observedFailureMessage || sharedFailureMessage ? (
               <p className="mt-2 text-xs text-state-error" role="alert">
-                {chatSendError}
+                {chatSendError ?? observedFailureMessage ?? sharedFailureMessage}
               </p>
             ) : null}
           </div>

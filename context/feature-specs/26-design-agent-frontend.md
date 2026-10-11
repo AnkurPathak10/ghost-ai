@@ -74,6 +74,7 @@ General
 
 - Follow Liveblocks best practices for feeds (`ai-chat`, `ai-status-feed`)
 - Keep everything collaborative, all updates should be visible across clients
+- Maintenance behavior: a Trigger.dev hard timeout may stop the worker before it sends a terminal Liveblocks status. For an active design run, use an authenticated server status read as a fallback to realtime; publish a terminal feed status and release the composer when the run is terminal. This status fallback is an exception to the original frontend-only scope above.
 
 ---
 

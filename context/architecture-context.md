@@ -55,6 +55,7 @@
 - Input: user prompt, project context, and current canvas state.
 - Execution: durable background task via Trigger.dev.
 - Output: structured node and edge updates written into the shared Liveblocks room.
+- Run completion: the sidebar listens to Trigger.dev realtime and the Liveblocks status feed. An authenticated, project-checked status route reads Trigger.dev's run state as a fallback, including when a hard timeout prevents the worker from publishing a terminal feed message. The sidebar reconciles a missing terminal feed event so collaborators leave the active state.
 
 ### Spec Generation
 

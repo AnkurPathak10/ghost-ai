@@ -54,5 +54,5 @@ function getOpenRouterProvider(): ReturnType<typeof createOpenAI> {
  * Uses `OPENROUTER_MODEL`; defaults to `nvidia/nemotron-3-ultra-550b-a55b:free`.
  */
 export function getOpenRouterChatModel() {
-  return getOpenRouterProvider()(openRouterModelId())
+  return getOpenRouterProvider().chat(openRouterModelId())
 }
